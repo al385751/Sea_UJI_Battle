@@ -23,7 +23,7 @@ class BoardClass(_coordTL: CellDataClass, _boardWidth: Int, _boardHeight: Int, _
         if (!boatNames.contains(boat))
             return null
 
-        TODO("Check every cell finding the boat string")
+        TODO("Check every cell finding the boat requested")
 
         return boatPlacement
     }

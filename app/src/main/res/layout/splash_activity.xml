@@ -12,8 +12,21 @@
         android:layout_height="wrap_content"
         android:onClick="startGame"
         android:text="Start Game"
-        app:backgroundTint="#000000"
+        app:backgroundTint="#FFBF00"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="150dp"
+        android:fontFamily="@font/amarante"
+        android:text="UJI Sea Battle"
+        android:textColor="#FFBF00"
+        android:textSize="50sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
