@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.Typeface
 import androidx.core.content.res.ResourcesCompat
 import com.example.a2_seaujibattle.R
 import com.example.a2_seaujibattle.additionalClasses.BoardClass
@@ -65,30 +64,63 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
     override fun onDrawingRequested(): Bitmap {
         graphics.clear(Color.WHITE)
 
-        drawText()
+        drawBoard(0)
+        drawText("Place ships")
         drawBoats()
 
         return graphics.frameBuffer
     }
 
-    private fun drawText() {
-        graphics.drawText(originX + (cellSide * 11), (originY - (cellSide * 0.75)).toFloat(), "Time to place your ships!!")
+    private fun drawBoard(player : Int) {
+        if (player == 0) {
+            for (row in 0 until playerBoard.boardHeight) {
+                for (col in 0 until playerBoard.boardWidth) {
+                    graphics.drawBitmap(Assets.waterUntouched, originX + (cellSide * row), originY + (cellSide * col))
+                }
+            }
+        }
+        else if (player == 1) {
+            for (row in 0 until rivalBoard.boardHeight) {
+                for (col in 0 until rivalBoard.boardWidth) {
+                    graphics.drawBitmap(Assets.waterUntouched, originX2 + (cellSide * row), originY2 + (cellSide * col))
+                }
+            }
+        }
+    }
+
+    private fun drawText(state : String) {
         graphics.setTextSize(90)
         graphics.setTextAlign(Paint.Align.CENTER)
         graphics.setTextColor(Color.parseColor("#FFBF00"))
         graphics.setTypeface(myTypeface)
+
+        if (state == "Place ships"){
+            graphics.drawText(originX + (cellSide * 11), (originY - (cellSide * 0.75)).toFloat(), "Time to place your ships!!")
+        }
+
+        else if (state == "Play game") {
+            graphics.drawText(originX + (cellSide * 11), (originY - (cellSide * 0.75)).toFloat(), "Sink the enemy's navy")
+        }
+
+        else if (state == "Win") {
+            graphics.drawText(originX + (cellSide * 11), (originY - (cellSide * 0.75)).toFloat(), "Congrats!! You won the game!")
+        }
+
+        else if (state == "Lose") {
+            graphics.drawText(originX + (cellSide * 11), (originY - (cellSide * 0.75)).toFloat(), "Oh no!! You lost!")
+        }
     }
 
     private fun drawBoats() {
-        graphics.drawBitmap(Assets.horizontalCarrier, originX2 + cellSide, originY2)
-        graphics.drawBitmap(Assets.horizontalBattleship, originX2 + cellSide, originY2 + (cellSide * 2))
-        graphics.drawBitmap(Assets.horizontalBattleship, originX2 + (cellSide * 5), originY2 + (cellSide * 2))
-        graphics.drawBitmap(Assets.horizontalShipRescue, originX2 + cellSide, originY2 + (cellSide * 4))
-        graphics.drawBitmap(Assets.horizontalShipRescue, originX2 + (cellSide * 4), originY2 + (cellSide * 4))
-        graphics.drawBitmap(Assets.horizontalShipRescue, originX2 + (cellSide * 7), originY2 + (cellSide * 4))
-        graphics.drawBitmap(Assets.horizontalShipPatrol, originX2 + cellSide, originY2 + (cellSide * 6))
-        graphics.drawBitmap(Assets.horizontalShipPatrol, originX2 + (cellSide * 3), originY2 + (cellSide * 6))
-        graphics.drawBitmap(Assets.horizontalShipPatrol, originX2 + (cellSide * 5), originY2 + (cellSide * 6))
-        graphics.drawBitmap(Assets.horizontalShipPatrol, originX2 + (cellSide * 7), originY2 + (cellSide * 6))
+        graphics.drawBitmap(Assets.horizontalCarrier, originX2 + cellSide, originY2 + cellSide)
+        graphics.drawBitmap(Assets.horizontalBattleship, originX2 + cellSide, originY2 + (cellSide * 3))
+        graphics.drawBitmap(Assets.horizontalBattleship, originX2 + (cellSide * 5), originY2 + (cellSide * 3))
+        graphics.drawBitmap(Assets.horizontalShipRescue, originX2 + cellSide, originY2 + (cellSide * 5))
+        graphics.drawBitmap(Assets.horizontalShipRescue, originX2 + (cellSide * 4), originY2 + (cellSide * 5))
+        graphics.drawBitmap(Assets.horizontalShipRescue, originX2 + (cellSide * 7), originY2 + (cellSide * 5))
+        graphics.drawBitmap(Assets.horizontalShipPatrol, originX2 + cellSide, originY2 + (cellSide * 7))
+        graphics.drawBitmap(Assets.horizontalShipPatrol, originX2 + (cellSide * 3), originY2 + (cellSide * 7))
+        graphics.drawBitmap(Assets.horizontalShipPatrol, originX2 + (cellSide * 5), originY2 + (cellSide * 7))
+        graphics.drawBitmap(Assets.horizontalShipPatrol, originX2 + (cellSide * 7), originY2 + (cellSide * 7))
     }
 }
