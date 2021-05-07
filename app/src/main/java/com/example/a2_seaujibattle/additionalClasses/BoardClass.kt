@@ -5,6 +5,18 @@ class BoardClass(_coordTL: CellDataClass, _boardWidth: Int, _boardHeight: Int, _
     var boardWidth = _boardWidth
     var boardHeight = _boardHeight
     var cellSide = _cellSide
+    var board : MutableList<MutableList<CellDataClass>> = mutableListOf()
+
+    init {
+        var columnBoard: MutableList<CellDataClass>
+        for (row in coordTL.x until boardWidth) {
+            columnBoard = mutableListOf()
+            for (col in coordTL.y until boardHeight) {
+                columnBoard.add(CellDataClass(row, col))
+            }
+            board.add(columnBoard)
+        }
+    }
 
     fun coordInsideBoard(cell: CellDataClass) : Boolean {
         if (cell.x < this.coordTL.x || cell.x >= (this.coordTL.x + this.boardWidth))

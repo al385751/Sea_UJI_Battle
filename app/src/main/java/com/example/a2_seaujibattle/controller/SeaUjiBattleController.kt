@@ -4,10 +4,13 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Paint
+import android.util.Log
 import androidx.core.content.res.ResourcesCompat
 import com.example.a2_seaujibattle.R
 import com.example.a2_seaujibattle.additionalClasses.BoardClass
 import com.example.a2_seaujibattle.additionalClasses.CellDataClass
+import com.example.a2_seaujibattle.additionalClasses.ShipClass
+import com.example.a2_seaujibattle.model.Model
 import es.uji.vj1229.framework.Graphics
 import es.uji.vj1229.framework.IGameController
 import es.uji.vj1229.framework.TouchHandler
@@ -36,23 +39,55 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
     val graphics : Graphics = Graphics(width, height)
     val myTypeface = ResourcesCompat.getFont(applicationContext, R.font.amarante)
 
+    val model : Model = Model()
+
+    var draggingShip : Boolean = false
+    lateinit var draggedBoat : ShipClass
+
     init {
         Assets.loadDrawableAssets(applicationContext)
         Assets.createResizedAssets(applicationContext, cellSide.toInt())
     }
+
+    val carrier = ShipClass("Carrier",((originX2 - xOffset + cellSide) / cellSide).toInt(), ((originY2 - yOffset + cellSide) / cellSide).toInt(), Assets.CARRIER_LENGTH, true, false, Assets.horizontalCarrier!!, Assets.verticalCarrier!!, Assets.horizontalCarrierFlames!!, Assets.verticalCarrierFlames!!)
+    val battleshipOne = ShipClass("BattleshipOne", ((originX2 - xOffset + cellSide) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 3)) / cellSide).toInt(), Assets.BATTLESHIP_LENGTH, true, false, Assets.horizontalBattleship!!, Assets.verticalBattleship!!, Assets.horizontalBattleshipFlames!!, Assets.verticalBattleshipFlames!!)
+    val battleshipTwo = ShipClass("BattleshipTwo", ((originX2 - xOffset + (cellSide * 5)) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 3)) / cellSide).toInt(), Assets.BATTLESHIP_LENGTH, true, false, Assets.horizontalBattleship!!, Assets.verticalBattleship!!, Assets.horizontalBattleshipFlames!!, Assets.verticalBattleshipFlames!!)
+    val shiprescueOne = ShipClass("ShiprescueOne", ((originX2 - xOffset + cellSide) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 5)) / cellSide).toInt(), Assets.SHIP_RESCUE_LENGTH, true, false, Assets.horizontalShipRescue!!, Assets.verticalShipRescue!!, Assets.horizontalShipRescueFlames!!, Assets.verticalShipRescueFlames!!)
+    val shiprescueTwo = ShipClass("ShiprescueTwo", ((originX2 - xOffset + (cellSide * 4)) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 5)) / cellSide).toInt(), Assets.SHIP_RESCUE_LENGTH, true, false, Assets.horizontalShipRescue!!, Assets.verticalShipRescue!!, Assets.horizontalShipRescueFlames!!, Assets.verticalShipRescueFlames!!)
+    val shiprescueThree = ShipClass("ShiprescueThree", ((originX2 - xOffset + (cellSide * 7)) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 5)) / cellSide).toInt(), Assets.SHIP_RESCUE_LENGTH, true, false, Assets.horizontalShipRescue!!, Assets.verticalShipRescue!!, Assets.horizontalShipRescueFlames!!, Assets.verticalShipRescueFlames!!)
+    val shippatrolOne = ShipClass("ShippatrolOne", ((originX2 - xOffset + cellSide) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 7)) / cellSide).toInt(), Assets.SHIP_PATROL_LENGTH, true, false, Assets.horizontalShipPatrol!!, Assets.verticalShipPatrol!!, Assets.horizontalShipPatrolFlames!!, Assets.verticalShipPatrolFlames!!)
+    val shippatrolTwo = ShipClass("ShippatrolTwo", ((originX2 - xOffset + (cellSide * 3)) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 7)) / cellSide).toInt(), Assets.SHIP_PATROL_LENGTH, true, false, Assets.horizontalShipPatrol!!, Assets.verticalShipPatrol!!, Assets.horizontalShipPatrolFlames!!, Assets.verticalShipPatrolFlames!!)
+    val shippatrolThree = ShipClass("ShippatrolThree", ((originX2 - xOffset + (cellSide * 5)) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 7)) / cellSide).toInt(), Assets.SHIP_PATROL_LENGTH, true, false, Assets.horizontalShipPatrol!!, Assets.verticalShipPatrol!!, Assets.horizontalShipPatrolFlames!!, Assets.verticalShipPatrolFlames!!)
+    val shippatrolFour = ShipClass("ShippatrolFour", ((originX2 - xOffset + (cellSide * 7)) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 7)) / cellSide).toInt(), Assets.SHIP_PATROL_LENGTH, true, false, Assets.horizontalShipPatrol!!, Assets.verticalShipPatrol!!, Assets.horizontalShipPatrolFlames!!, Assets.verticalShipPatrolFlames!!)
+
+    var shipList : MutableList<ShipClass> = mutableListOf(carrier, battleshipOne, battleshipTwo, shiprescueOne, shiprescueTwo, shiprescueThree, shippatrolOne, shippatrolTwo, shippatrolThree, shippatrolFour)
 
     override fun onUpdate(deltaTime: Float, touchEvents: MutableList<TouchHandler.TouchEvent>?) {
         if (touchEvents != null) {
             for (event in touchEvents) {
                 val correctedEventX : Int = ((event.x - xOffset) / cellSide).toInt()
                 val correctedEventY : Int = ((event.y - yOffset) / cellSide).toInt()
-
                 when (event.type) {
-                    TouchHandler.TouchType.TOUCH_UP -> {
-                        // ACTIONS FOR TOUCH_UP
+                    TouchHandler.TouchType.TOUCH_DOWN -> {
+                        if (model.clickedOnBoat(CellDataClass(correctedEventX, correctedEventY), shipList)) {
+                            draggingShip = true
+                            draggedBoat = model.getClickedBoat(CellDataClass(correctedEventX, correctedEventY), shipList)!!
+                        }
                     }
+
                     TouchHandler.TouchType.TOUCH_DRAGGED -> {
                         // ACTIONS FOR TOUCH_DRAGGED
+                        if (draggingShip) {
+                            draggedBoat.x = correctedEventX
+                            draggedBoat.y = correctedEventY
+                        }
+                        //Log.e("SEA UJI BATTLE", (model.clickedOnBoat(CellDataClass(correctedEventX, correctedEventY), shipList)).toString())
+                    }
+
+                    TouchHandler.TouchType.TOUCH_UP -> {
+                        // ACTIONS FOR TOUCH_UP
+                        draggingShip = false
+                        //Log.e("SEA UJI BATTLE", (playerBoard.coordInsideBoard(CellDataClass(correctedEventX, correctedEventY)).toString()))
                     }
                 }
             }
@@ -67,6 +102,9 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
         drawBoard(0)
         drawText("Place ships")
         drawBoats()
+        //drawBattleButton()
+        //drawText("Play game")
+        //drawBoard(1)
 
         return graphics.frameBuffer
     }
@@ -112,15 +150,21 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
     }
 
     private fun drawBoats() {
-        graphics.drawBitmap(Assets.horizontalCarrier, originX2 + cellSide, originY2 + cellSide)
-        graphics.drawBitmap(Assets.horizontalBattleship, originX2 + cellSide, originY2 + (cellSide * 3))
-        graphics.drawBitmap(Assets.horizontalBattleship, originX2 + (cellSide * 5), originY2 + (cellSide * 3))
-        graphics.drawBitmap(Assets.horizontalShipRescue, originX2 + cellSide, originY2 + (cellSide * 5))
-        graphics.drawBitmap(Assets.horizontalShipRescue, originX2 + (cellSide * 4), originY2 + (cellSide * 5))
-        graphics.drawBitmap(Assets.horizontalShipRescue, originX2 + (cellSide * 7), originY2 + (cellSide * 5))
-        graphics.drawBitmap(Assets.horizontalShipPatrol, originX2 + cellSide, originY2 + (cellSide * 7))
-        graphics.drawBitmap(Assets.horizontalShipPatrol, originX2 + (cellSide * 3), originY2 + (cellSide * 7))
-        graphics.drawBitmap(Assets.horizontalShipPatrol, originX2 + (cellSide * 5), originY2 + (cellSide * 7))
-        graphics.drawBitmap(Assets.horizontalShipPatrol, originX2 + (cellSide * 7), originY2 + (cellSide * 7))
+        graphics.drawBitmap(carrier.horizontalBoat, carrier.x * cellSide + xOffset, carrier.y * cellSide + yOffset)
+        graphics.drawBitmap(battleshipOne.horizontalBoat, battleshipOne.x * cellSide + xOffset, battleshipOne.y * cellSide + yOffset)
+        graphics.drawBitmap(battleshipTwo.horizontalBoat, battleshipTwo.x * cellSide + xOffset, battleshipTwo.y * cellSide + yOffset)
+        graphics.drawBitmap(shiprescueOne.horizontalBoat, shiprescueOne.x * cellSide + xOffset, shiprescueOne.y * cellSide + yOffset)
+        graphics.drawBitmap(shiprescueTwo.horizontalBoat, shiprescueTwo.x * cellSide + xOffset, shiprescueTwo.y * cellSide + yOffset)
+        graphics.drawBitmap(shiprescueThree.horizontalBoat, shiprescueThree.x * cellSide + xOffset, shiprescueThree.y * cellSide + yOffset)
+        graphics.drawBitmap(shippatrolOne.horizontalBoat, shippatrolOne.x * cellSide + xOffset, shippatrolOne.y * cellSide + yOffset)
+        graphics.drawBitmap(shippatrolTwo.horizontalBoat, shippatrolTwo.x * cellSide + xOffset, shippatrolTwo.y * cellSide + yOffset)
+        graphics.drawBitmap(shippatrolThree.horizontalBoat, shippatrolThree.x * cellSide + xOffset, shippatrolThree.y * cellSide + yOffset)
+        graphics.drawBitmap(shippatrolFour.horizontalBoat, shippatrolFour.x * cellSide + xOffset, shippatrolFour.y * cellSide + yOffset)
+    }
+
+    private fun drawBattleButton() {
+        graphics.drawRect(originX2 + (cellSide * 5), originY2 + (cellSide * 6), cellSide*4, cellSide * 4, Color.parseColor("#FFBF00"))
+        graphics.setTextColor(Color.BLACK)
+        graphics.drawText(originX2 + (cellSide * 7), (originY2 + (cellSide * 8.25)).toFloat(), "Battle!")
     }
 }
