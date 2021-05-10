@@ -1,22 +1,13 @@
 package com.example.a2_seaujibattle.additionalClasses
 
+import android.util.Log
+
 class BoardClass(_coordTL: CellDataClass, _boardWidth: Int, _boardHeight: Int, _cellSide: Float) {
     var coordTL = _coordTL
     var boardWidth = _boardWidth
     var boardHeight = _boardHeight
     var cellSide = _cellSide
-    var board : MutableList<MutableList<CellDataClass>> = mutableListOf()
-
-    init {
-        var columnBoard: MutableList<CellDataClass>
-        for (row in coordTL.x until boardWidth) {
-            columnBoard = mutableListOf()
-            for (col in coordTL.y until boardHeight) {
-                columnBoard.add(CellDataClass(row, col))
-            }
-            board.add(columnBoard)
-        }
-    }
+    var board : MutableList<MutableList<BoardCellClass>> = mutableListOf()
 
     fun coordInsideBoard(cell: CellDataClass) : Boolean {
         if (cell.x < this.coordTL.x || cell.x >= (this.coordTL.x + this.boardWidth))
@@ -24,19 +15,37 @@ class BoardClass(_coordTL: CellDataClass, _boardWidth: Int, _boardHeight: Int, _
         else return !(cell.y < this.coordTL.y || cell.y >= (this.coordTL.y + this.boardHeight))
     }
 
-    fun whereIsPlaced(boat: String) : MutableList<CellDataClass>? {
-        val boatPlacement : MutableList<CellDataClass> = ArrayList()
-        val boatNames : ArrayList<String> = arrayListOf("Boat 4.1",
-                                                        "Boat 3.1", "Boat 3.2",
-                                                        "Boat 2.1", "Boat 2.2", "Boat 2.3",
-                                                        "Boat 1.1", "Boat 1.2", "Boat 1.3", "Boat 1.4")
+    fun whereIsPlaced(boat: ShipClass) : MutableList<BoardCellClass>? {
+        val boatPlacement : MutableList<BoardCellClass> = mutableListOf()
+
+        /*val boatNames : ArrayList<String> = arrayListOf("Carrier",
+                                                        "BattleshipOne", "BattleshipTwo",
+                                                        "ShiprescueOne", "ShiprescueTwo", "ShiprescueThree",
+                                                        "ShippatrolOne", "ShippatrolTwo", "ShippatrolThree", "ShippatrolFour")
 
         // The name of the boat parameter is incorrect
-        if (!boatNames.contains(boat))
+        if (!boatNames.contains(boat.name))
             return null
+        */
 
-        TODO("Check every cell finding the boat requested")
-
+        for (row in board) {
+            for (cell in row) {
+                if (cell.hasBoat == boat.name) {
+                    boatPlacement.add(cell)
+                }
+            }
+        }
         return boatPlacement
+    }
+
+    fun getCellInBoard(cell: CellDataClass) : BoardCellClass? {
+        for (row in board) {
+            for (cellBoard in row) {
+                if (cell.x - 1 == cellBoard.cell.x && cell.y - 2 == cellBoard.cell.y) {
+                    return cellBoard
+                }
+            }
+        }
+        return null
     }
 }

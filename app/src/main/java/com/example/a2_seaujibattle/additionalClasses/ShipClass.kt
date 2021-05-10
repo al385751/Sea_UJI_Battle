@@ -3,7 +3,8 @@ package com.example.a2_seaujibattle.additionalClasses
 import android.graphics.Bitmap
 
 class ShipClass(_name : String, _x: Int, _y: Int, _shipLength: Int, _isHorizontal: Boolean, _isSunk: Boolean,
-    _horizontalBoat: Bitmap, _verticalBoat: Bitmap, _horizontalFlamesBoat: Bitmap, _verticalFlamesBoat: Bitmap) {
+    _horizontalBoat: Bitmap, _verticalBoat: Bitmap, _horizontalFlamesBoat: Bitmap, _verticalFlamesBoat: Bitmap,
+    _placed : Boolean) {
     var name = _name
     var x = _x
     var y = _y
@@ -14,4 +15,7 @@ class ShipClass(_name : String, _x: Int, _y: Int, _shipLength: Int, _isHorizonta
     var verticalBoat = _verticalBoat
     var horizontalFlamesBoat = _horizontalFlamesBoat
     var verticalFlamesBoat = _verticalFlamesBoat
+    var placed = _placed
+
+    var activeBitmap: Bitmap = _horizontalBoat
 }

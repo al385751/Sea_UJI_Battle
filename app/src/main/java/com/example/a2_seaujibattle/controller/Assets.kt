@@ -26,6 +26,7 @@ object Assets {
 
     var waterUntouched : Bitmap? = null
     var waterTouched : Bitmap? = null
+    var waterOver : Bitmap? = null
 
     var horizontalCarrier : Bitmap? = null
     var horizontalCarrierFlames : Bitmap? = null
@@ -77,6 +78,11 @@ object Assets {
         waterTouched?.recycle()
         waterTouched = Bitmap.createScaledBitmap(
                 BitmapFactory.decodeResource(resources, R.drawable.watertouched),
+                (cellSize * 1.05).toInt(), (cellSize * 1.05).toInt(), true)
+
+        waterOver?.recycle()
+        waterOver = Bitmap.createScaledBitmap(
+                BitmapFactory.decodeResource(resources, R.drawable.waterover),
                 (cellSize * 1.05).toInt(), (cellSize * 1.05).toInt(), true)
 
         horizontalCarrier?.recycle()
