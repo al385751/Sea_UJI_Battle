@@ -38,10 +38,21 @@ class BoardClass(_coordTL: CellDataClass, _boardWidth: Int, _boardHeight: Int, _
         return boatPlacement
     }
 
-    fun getCellInBoard(cell: CellDataClass) : BoardCellClass? {
+    fun getCellInFirstBoard(cell: CellDataClass) : BoardCellClass? {
         for (row in board) {
             for (cellBoard in row) {
                 if (cell.x - 1 == cellBoard.cell.x && cell.y - 2 == cellBoard.cell.y) {
+                    return cellBoard
+                }
+            }
+        }
+        return null
+    }
+
+    fun getCellInSecondBoard(cell: CellDataClass) : BoardCellClass? {
+        for (row in board) {
+            for (cellBoard in row) {
+                if (cell.x - 13 == cellBoard.cell.x && cell.y - 2 == cellBoard.cell.y) {
                     return cellBoard
                 }
             }

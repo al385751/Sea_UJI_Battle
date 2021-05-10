@@ -64,7 +64,7 @@ class Model {
         if (draggedBoat.isHorizontal) {
             for (i in 0 until draggedBoat.shipLength) {
                 if (board.coordInsideBoard(CellDataClass(draggedBoat.x + i, draggedBoat.y))) {
-                    val overCell = board.getCellInBoard(CellDataClass(draggedBoat.x + i, draggedBoat.y))
+                    val overCell = board.getCellInFirstBoard(CellDataClass(draggedBoat.x + i, draggedBoat.y))
                     overCell!!.isCovered = true
                 }
                 else return false
@@ -74,7 +74,7 @@ class Model {
         else {
             for (i in 0 until draggedBoat.shipLength) {
                 if (board.coordInsideBoard(CellDataClass(draggedBoat.x, draggedBoat.y + i))) {
-                    val overCell = board.getCellInBoard(CellDataClass(draggedBoat.x, draggedBoat.y + i))
+                    val overCell = board.getCellInFirstBoard(CellDataClass(draggedBoat.x, draggedBoat.y + i))
                     overCell!!.isCovered = true
                 }
                 else return false
@@ -179,7 +179,7 @@ class Model {
         if (ship.isHorizontal) {
             for (i in 1 until ship.shipLength) {
                 if (board.coordInsideBoard(CellDataClass(ship.x, ship.y + i))) {
-                    val overCell = board.getCellInBoard(CellDataClass(ship.x, ship.y + i))
+                    val overCell = board.getCellInFirstBoard(CellDataClass(ship.x, ship.y + i))
                     if (overCell!!.hasBoat != "" && overCell.hasBoat != ship.name) {
                         return false
                     }
@@ -191,7 +191,7 @@ class Model {
         else {
             for (i in 1 until ship.shipLength) {
                 if (board.coordInsideBoard(CellDataClass(ship.x + i, ship.y))) {
-                    val overCell = board.getCellInBoard(CellDataClass(ship.x + i, ship.y))
+                    val overCell = board.getCellInFirstBoard(CellDataClass(ship.x + i, ship.y))
                     if (overCell!!.hasBoat != "" && overCell.hasBoat != ship.name) {
                         return false
                     }
@@ -205,7 +205,7 @@ class Model {
     fun colocateShip(ship: ShipClass, board: BoardClass) {
         if (ship.isHorizontal) {
             for (i in 0 until ship.shipLength) {
-                val overCell = board.getCellInBoard(CellDataClass(ship.x + i, ship.y))
+                val overCell = board.getCellInFirstBoard(CellDataClass(ship.x + i, ship.y))
                 overCell!!.hasBoat = ship.name
             }
             ship.placed = true
@@ -213,7 +213,7 @@ class Model {
 
         else {
             for (i in 0 until ship.shipLength) {
-                val overCell = board.getCellInBoard(CellDataClass(ship.x, ship.y + i))
+                val overCell = board.getCellInFirstBoard(CellDataClass(ship.x, ship.y + i))
                 overCell!!.hasBoat = ship.name
             }
             ship.placed = true
@@ -234,7 +234,7 @@ class Model {
         if (ship.isHorizontal) {
             for (i in 0 until ship.shipLength) {
                 if (board.coordInsideBoard(CellDataClass(ship.x + i, ship.y))) {
-                    val overCell = board.getCellInBoard(CellDataClass(ship.x + i, ship.y))
+                    val overCell = board.getCellInFirstBoard(CellDataClass(ship.x + i, ship.y))
                     if (overCell!!.hasBoat != "" && overCell.hasBoat != ship.name) {
                         return true
                     }
@@ -246,7 +246,7 @@ class Model {
         else {
             for (i in 0 until ship.shipLength) {
                 if (board.coordInsideBoard(CellDataClass(ship.x, ship.y + i))) {
-                    val overCell = board.getCellInBoard(CellDataClass(ship.x, ship.y + i))
+                    val overCell = board.getCellInFirstBoard(CellDataClass(ship.x, ship.y + i))
                     if (overCell!!.hasBoat != "" && overCell.hasBoat != ship.name) {
                         return true
                     }
@@ -264,5 +264,17 @@ class Model {
                 draw = false
         }
         return draw
+    }
+
+    fun checkIfButtonPressed(cell: CellDataClass): Boolean {
+        val buttonCells : List<CellDataClass> = listOf(CellDataClass(18, 8), CellDataClass(19, 8), CellDataClass(20, 8), CellDataClass(21, 8),
+                                                        CellDataClass(18, 9), CellDataClass(19, 9), CellDataClass(20, 9), CellDataClass(21, 9),
+                                                        CellDataClass(18, 10), CellDataClass(19, 10), CellDataClass(20, 10), CellDataClass(21, 10),
+                                                        CellDataClass(18, 11), CellDataClass(19, 11), CellDataClass(20, 11), CellDataClass(21, 11))
+        for (buttonCell in buttonCells) {
+            if (buttonCell.x == cell.x && buttonCell.y == cell.y)
+                return true
+        }
+        return false
     }
 }

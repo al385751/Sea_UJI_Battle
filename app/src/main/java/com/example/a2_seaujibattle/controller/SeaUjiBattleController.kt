@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Paint
+import android.util.DebugUtils
 import android.util.Log
 import androidx.core.content.res.ResourcesCompat
 import com.example.a2_seaujibattle.R
@@ -12,6 +13,7 @@ import com.example.a2_seaujibattle.additionalClasses.BoardClass
 import com.example.a2_seaujibattle.additionalClasses.CellDataClass
 import com.example.a2_seaujibattle.additionalClasses.ShipClass
 import com.example.a2_seaujibattle.model.Model
+import com.example.a2_seaujibattle.model.RivalModel
 import es.uji.vj1229.framework.Graphics
 import es.uji.vj1229.framework.IGameController
 import es.uji.vj1229.framework.TouchHandler
@@ -44,6 +46,7 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
     val drawnRivalBoard : MutableList<MutableList<BoardCellClass>> = mutableListOf()
 
     val model : Model = Model()
+    val rivalModel : RivalModel = RivalModel()
 
     var draggingShip : Boolean = false
     var clickedShip : Boolean = false
@@ -54,6 +57,9 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
 
     var player : Boolean = true
     var rival : Boolean = false
+
+    var placingShips : Boolean = true
+    var playingGame : Boolean = false
 
     init {
         Assets.loadDrawableAssets(applicationContext)
@@ -103,7 +109,20 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
     val shippatrolThreeDefaultPosition : CellDataClass = CellDataClass((shippatrolThree.x), (shippatrolThree.y))
     val shippatrolFourDefaultPosition : CellDataClass = CellDataClass((shippatrolFour.x), (shippatrolFour.y))
 
+    val rcarrier = ShipClass("Carrier",0, 0, Assets.CARRIER_LENGTH, true, false, Assets.horizontalCarrier!!, Assets.verticalCarrier!!, Assets.horizontalCarrierFlames!!, Assets.verticalCarrierFlames!!, false)
+    val rbattleshipOne = ShipClass("BattleshipOne", 0, 0, Assets.BATTLESHIP_LENGTH, true, false, Assets.horizontalBattleship!!, Assets.verticalBattleship!!, Assets.horizontalBattleshipFlames!!, Assets.verticalBattleshipFlames!!, false)
+    val rbattleshipTwo = ShipClass("BattleshipTwo", 0, 0, Assets.BATTLESHIP_LENGTH, true, false, Assets.horizontalBattleship!!, Assets.verticalBattleship!!, Assets.horizontalBattleshipFlames!!, Assets.verticalBattleshipFlames!!, false)
+    val rshiprescueOne = ShipClass("ShiprescueOne", 0, 0, Assets.SHIP_RESCUE_LENGTH, true, false, Assets.horizontalShipRescue!!, Assets.verticalShipRescue!!, Assets.horizontalShipRescueFlames!!, Assets.verticalShipRescueFlames!!, false)
+    val rshiprescueTwo = ShipClass("ShiprescueTwo", 0, 0, Assets.SHIP_RESCUE_LENGTH, true, false, Assets.horizontalShipRescue!!, Assets.verticalShipRescue!!, Assets.horizontalShipRescueFlames!!, Assets.verticalShipRescueFlames!!, false)
+    val rshiprescueThree = ShipClass("ShiprescueThree", 0, 0, Assets.SHIP_RESCUE_LENGTH, true, false, Assets.horizontalShipRescue!!, Assets.verticalShipRescue!!, Assets.horizontalShipRescueFlames!!, Assets.verticalShipRescueFlames!!, false)
+    val rshippatrolOne = ShipClass("ShippatrolOne", 0, 0, Assets.SHIP_PATROL_LENGTH, true, false, Assets.horizontalShipPatrol!!, Assets.verticalShipPatrol!!, Assets.horizontalShipPatrolFlames!!, Assets.verticalShipPatrolFlames!!, false)
+    val rshippatrolTwo = ShipClass("ShippatrolTwo", 0, 0, Assets.SHIP_PATROL_LENGTH, true, false, Assets.horizontalShipPatrol!!, Assets.verticalShipPatrol!!, Assets.horizontalShipPatrolFlames!!, Assets.verticalShipPatrolFlames!!, false)
+    val rshippatrolThree = ShipClass("ShippatrolThree", 0, 0, Assets.SHIP_PATROL_LENGTH, true, false, Assets.horizontalShipPatrol!!, Assets.verticalShipPatrol!!, Assets.horizontalShipPatrolFlames!!, Assets.verticalShipPatrolFlames!!, false)
+    val rshippatrolFour = ShipClass("ShippatrolFour", 0, 0, Assets.SHIP_PATROL_LENGTH, true, false, Assets.horizontalShipPatrol!!, Assets.verticalShipPatrol!!, Assets.horizontalShipPatrolFlames!!, Assets.verticalShipPatrolFlames!!, false)
+
+
     var shipList : MutableList<ShipClass> = mutableListOf(carrier, battleshipOne, battleshipTwo, shiprescueOne, shiprescueTwo, shiprescueThree, shippatrolOne, shippatrolTwo, shippatrolThree, shippatrolFour)
+    var rshipList : MutableList<ShipClass> = mutableListOf(rcarrier, rbattleshipOne, rbattleshipTwo, rshiprescueOne, rshiprescueTwo, rshiprescueThree, rshippatrolOne, rshippatrolTwo, rshippatrolThree, rshippatrolFour)
     var defaultShipPositions : MutableList<CellDataClass> = mutableListOf(carrierDefaultPosition, battleshipOneDefaultPosition, battleshipTwoDefaultPosition, shiprescueOneDefaultPosition, shiprescueTwoDefaultPosition, shiprescueThreeDefaultPosition, shippatrolOneDefaultPosition, shippatrolTwoDefaultPosition, shippatrolThreeDefaultPosition, shippatrolFourDefaultPosition)
 
     override fun onUpdate(deltaTime: Float, touchEvents: MutableList<TouchHandler.TouchEvent>?) {
@@ -113,75 +132,109 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
                 val correctedEventY : Int = ((event.y - yOffset) / cellSide).toInt()
                 when (event.type) {
                     TouchHandler.TouchType.TOUCH_DOWN -> {
-                        draggedBoat = null
-                        clickedShip = false
-                        if (model.clickedOnBoat(CellDataClass(correctedEventX, correctedEventY), shipList)) {
-                            clickedShip = true
-                            draggedBoat = model.getClickedBoat(CellDataClass(correctedEventX, correctedEventY), shipList)!!
+                        // ACTIONS FOR TOUCH_DOWN
+                        // Placing ships phase
+                        if (placingShips) {
+                            draggedBoat = null
+                            clickedShip = false
+                            if (model.clickedOnBoat(CellDataClass(correctedEventX, correctedEventY), shipList)) {
+                                clickedShip = true
+                                draggedBoat = model.getClickedBoat(CellDataClass(correctedEventX, correctedEventY), shipList)!!
+                            }
                         }
+
+                        // Playing game phase
                     }
 
                     TouchHandler.TouchType.TOUCH_DRAGGED -> {
                         // ACTIONS FOR TOUCH_DRAGGED
-                        draggingShip = true
-                        if (clickedShip) {
-                            model.moveBoat(CellDataClass(correctedEventX, correctedEventY), draggedBoat!!)
+                        // Placing ships phase
+                        if (placingShips) {
+                            draggingShip = true
+                            if (clickedShip) {
+                                model.moveBoat(CellDataClass(correctedEventX, correctedEventY), draggedBoat!!)
 
-                            // Update cells
-                            model.resetWaterCells(playerBoard)
-                            if (model.checkPosition(CellDataClass(correctedEventX, correctedEventY), draggedBoat!!, playerBoard)) {
-                                model.changeWaterCells(playerBoard)
-                            }
-
-                            else {
+                                // Update cells
                                 model.resetWaterCells(playerBoard)
-                                model.changeWaterCells(playerBoard)
+                                if (model.checkPosition(CellDataClass(correctedEventX, correctedEventY), draggedBoat!!, playerBoard)) {
+                                    model.changeWaterCells(playerBoard)
+                                }
+
+                                else {
+                                    model.resetWaterCells(playerBoard)
+                                    model.changeWaterCells(playerBoard)
+                                }
                             }
                         }
+
+                        // Playing game phase
                     }
 
                     TouchHandler.TouchType.TOUCH_UP -> {
                         // ACTIONS FOR TOUCH_UP
-                        clickedShip = false
-                        if (!draggingShip && draggedBoat != null) {
-                            if (model.checkRotation(draggedBoat!!, playerBoard)) {
-                                model.resetBoardOfBoat(draggedBoat!!, playerBoard)
-                                model.rotateBoat(draggedBoat!!)
-                                model.colocateShip(draggedBoat!!, playerBoard)
-                            }
-
-                            model.resetWaterCells(playerBoard)
-                            model.changeWaterCells(playerBoard)
-                        }
-
-                        else if (draggedBoat != null) {
-                            if (!model.checkPosition(CellDataClass(correctedEventX, correctedEventY), draggedBoat!!, playerBoard)) {
-                                model.resetPosition(draggedBoat!!, defaultShipPositions)
-                                model.resetBoardOfBoat(draggedBoat!!, playerBoard)
-                                model.resetWaterCells(playerBoard)
-                            }
-
-                            else {
-                                if (!model.checkIfThereIsBoat(draggedBoat!!, playerBoard)) {
+                        // Placing ships phase
+                        if (placingShips) {
+                            clickedShip = false
+                            if (!draggingShip && draggedBoat != null) {
+                                if (model.checkRotation(draggedBoat!!, playerBoard)) {
                                     model.resetBoardOfBoat(draggedBoat!!, playerBoard)
+                                    model.rotateBoat(draggedBoat!!)
                                     model.colocateShip(draggedBoat!!, playerBoard)
                                 }
-                                else {
-                                    model.resetBoardOfBoat(draggedBoat!!, playerBoard)
-                                    model.resetPosition(draggedBoat!!, defaultShipPositions)
-                                }
+
+                                model.resetWaterCells(playerBoard)
+                                model.changeWaterCells(playerBoard)
                             }
-                            model.resetWaterCells(playerBoard)
-                            model.changeWaterCells(playerBoard)
-                            draggingShip = false
+
+                            else if (draggedBoat != null) {
+                                if (!model.checkPosition(CellDataClass(correctedEventX, correctedEventY), draggedBoat!!, playerBoard)) {
+                                    model.resetPosition(draggedBoat!!, defaultShipPositions)
+                                    model.resetBoardOfBoat(draggedBoat!!, playerBoard)
+                                    model.resetWaterCells(playerBoard)
+                                }
+
+                                else {
+                                    if (!model.checkIfThereIsBoat(draggedBoat!!, playerBoard)) {
+                                        model.resetBoardOfBoat(draggedBoat!!, playerBoard)
+                                        model.colocateShip(draggedBoat!!, playerBoard)
+                                    }
+                                    else {
+                                        model.resetBoardOfBoat(draggedBoat!!, playerBoard)
+                                        model.resetPosition(draggedBoat!!, defaultShipPositions)
+                                    }
+                                }
+                                model.resetWaterCells(playerBoard)
+                                model.changeWaterCells(playerBoard)
+                                draggingShip = false
+                            }
                         }
+
+                        // Ships placed
+                        if (drawButton) {
+                            if (model.checkIfButtonPressed(CellDataClass(correctedEventX, correctedEventY))) {
+                                placingShips = false
+                                rival = true
+                                drawButton = false
+
+                                rivalModel.generateNewBoard(rivalBoard, rshipList)
+                                playingGame = true
+                                gameState = "Play game"
+                            }
+                        }
+
+                        // Playing game phase
                     }
                 }
             }
         }
 
         // ACTIONS WHICH NOT DEPEND ON USER'S TOUCHES (UPDATES)
-        drawButton = model.checkBoatsPlaced(shipList)
+        // Placing ships phase
+        if (placingShips) {
+            drawButton = model.checkBoatsPlaced(shipList)
+        }
+
+        // Playing game phase
     }
 
     override fun onDrawingRequested(): Bitmap {
@@ -190,6 +243,9 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
         drawBoard(player, rival)
         drawText(gameState)
         drawBoats()
+        /*if (playingGame)
+            drawRBoats()
+        */
         drawBattleButton(drawButton)
 
         return graphics.frameBuffer
@@ -203,7 +259,8 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
                 }
             }
         }
-        else if (rival) {
+
+        if (rival) {
             for (list in drawnRivalBoard) {
                 for (cell in list) {
                     graphics.drawBitmap(cell.activeBitmap, originX2 + (cellSide * cell.cell.x), originY2 + (cellSide * cell.cell.y))
@@ -250,6 +307,19 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
         graphics.drawBitmap(shippatrolTwo.activeBitmap, shippatrolTwo.x * cellSide + xOffset, shippatrolTwo.y * cellSide + yOffset)
         graphics.drawBitmap(shippatrolThree.activeBitmap, shippatrolThree.x * cellSide + xOffset, shippatrolThree.y * cellSide + yOffset)
         graphics.drawBitmap(shippatrolFour.activeBitmap, shippatrolFour.x * cellSide + xOffset, shippatrolFour.y * cellSide + yOffset)
+    }
+
+    private fun drawRBoats() {
+        graphics.drawBitmap(rcarrier.activeBitmap, rcarrier.x * cellSide + xOffset, rcarrier.y * cellSide + yOffset)
+        graphics.drawBitmap(rbattleshipOne.activeBitmap, rbattleshipOne.x * cellSide + xOffset, rbattleshipOne.y * cellSide + yOffset)
+        graphics.drawBitmap(rbattleshipTwo.activeBitmap, rbattleshipTwo.x * cellSide + xOffset, rbattleshipTwo.y * cellSide + yOffset)
+        graphics.drawBitmap(rshiprescueOne.activeBitmap, rshiprescueOne.x * cellSide + xOffset, rshiprescueOne.y * cellSide + yOffset)
+        graphics.drawBitmap(rshiprescueTwo.activeBitmap, rshiprescueTwo.x * cellSide + xOffset, rshiprescueTwo.y * cellSide + yOffset)
+        graphics.drawBitmap(rshiprescueThree.activeBitmap, rshiprescueThree.x * cellSide + xOffset, rshiprescueThree.y * cellSide + yOffset)
+        graphics.drawBitmap(rshippatrolOne.activeBitmap, rshippatrolOne.x * cellSide + xOffset, rshippatrolOne.y * cellSide + yOffset)
+        graphics.drawBitmap(rshippatrolTwo.activeBitmap, rshippatrolTwo.x * cellSide + xOffset, rshippatrolTwo.y * cellSide + yOffset)
+        graphics.drawBitmap(rshippatrolThree.activeBitmap, rshippatrolThree.x * cellSide + xOffset, rshippatrolThree.y * cellSide + yOffset)
+        graphics.drawBitmap(rshippatrolFour.activeBitmap, rshippatrolFour.x * cellSide + xOffset, rshippatrolFour.y * cellSide + yOffset)
     }
 
     private fun drawBattleButton(draw : Boolean) {
