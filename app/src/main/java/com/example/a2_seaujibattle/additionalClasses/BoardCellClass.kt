@@ -13,4 +13,5 @@ class BoardCellClass(_cell: CellDataClass, _normalWater : Bitmap, _redWater : Bi
 
     var activeBitmap : Bitmap = _normalWater
     var hasBoat : String = ""
+    var partOfBoat : Int = -1
 }

@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Paint
-import android.util.DebugUtils
 import android.util.Log
 import androidx.core.content.res.ResourcesCompat
 import com.example.a2_seaujibattle.R
@@ -13,7 +12,7 @@ import com.example.a2_seaujibattle.additionalClasses.BoardClass
 import com.example.a2_seaujibattle.additionalClasses.CellDataClass
 import com.example.a2_seaujibattle.additionalClasses.ShipClass
 import com.example.a2_seaujibattle.model.Model
-import com.example.a2_seaujibattle.model.RivalModel
+import com.example.a2_seaujibattle.model.SeaBattleAction
 import es.uji.vj1229.framework.Graphics
 import es.uji.vj1229.framework.IGameController
 import es.uji.vj1229.framework.TouchHandler
@@ -46,20 +45,15 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
     val drawnRivalBoard : MutableList<MutableList<BoardCellClass>> = mutableListOf()
 
     val model : Model = Model()
-    val rivalModel : RivalModel = RivalModel()
 
     var draggingShip : Boolean = false
     var clickedShip : Boolean = false
     var draggedBoat : ShipClass? = null
 
-    var gameState : String = "Place ships"
     var drawButton : Boolean = false
 
     var player : Boolean = true
     var rival : Boolean = false
-
-    var placingShips : Boolean = true
-    var playingGame : Boolean = false
 
     init {
         Assets.loadDrawableAssets(applicationContext)
@@ -98,17 +92,6 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
     val shippatrolThree = ShipClass("ShippatrolThree", ((originX2 - xOffset + (cellSide * 5)) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 7)) / cellSide).toInt(), Assets.SHIP_PATROL_LENGTH, true, false, Assets.horizontalShipPatrol!!, Assets.verticalShipPatrol!!, Assets.horizontalShipPatrolFlames!!, Assets.verticalShipPatrolFlames!!, false)
     val shippatrolFour = ShipClass("ShippatrolFour", ((originX2 - xOffset + (cellSide * 7)) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 7)) / cellSide).toInt(), Assets.SHIP_PATROL_LENGTH, true, false, Assets.horizontalShipPatrol!!, Assets.verticalShipPatrol!!, Assets.horizontalShipPatrolFlames!!, Assets.verticalShipPatrolFlames!!, false)
 
-    val carrierDefaultPosition : CellDataClass = CellDataClass((carrier.x), (carrier.y))
-    val battleshipOneDefaultPosition : CellDataClass = CellDataClass((battleshipOne.x), (battleshipOne.y))
-    val battleshipTwoDefaultPosition : CellDataClass = CellDataClass((battleshipTwo.x), (battleshipTwo.y))
-    val shiprescueOneDefaultPosition : CellDataClass = CellDataClass((shiprescueOne.x), (shiprescueOne.y))
-    val shiprescueTwoDefaultPosition : CellDataClass = CellDataClass((shiprescueTwo.x), (shiprescueTwo.y))
-    val shiprescueThreeDefaultPosition : CellDataClass = CellDataClass((shiprescueThree.x), (shiprescueThree.y))
-    val shippatrolOneDefaultPosition : CellDataClass = CellDataClass((shippatrolOne.x), (shippatrolOne.y))
-    val shippatrolTwoDefaultPosition : CellDataClass = CellDataClass((shippatrolTwo.x), (shippatrolTwo.y))
-    val shippatrolThreeDefaultPosition : CellDataClass = CellDataClass((shippatrolThree.x), (shippatrolThree.y))
-    val shippatrolFourDefaultPosition : CellDataClass = CellDataClass((shippatrolFour.x), (shippatrolFour.y))
-
     val rcarrier = ShipClass("Carrier",0, 0, Assets.CARRIER_LENGTH, true, false, Assets.horizontalCarrier!!, Assets.verticalCarrier!!, Assets.horizontalCarrierFlames!!, Assets.verticalCarrierFlames!!, false)
     val rbattleshipOne = ShipClass("BattleshipOne", 0, 0, Assets.BATTLESHIP_LENGTH, true, false, Assets.horizontalBattleship!!, Assets.verticalBattleship!!, Assets.horizontalBattleshipFlames!!, Assets.verticalBattleshipFlames!!, false)
     val rbattleshipTwo = ShipClass("BattleshipTwo", 0, 0, Assets.BATTLESHIP_LENGTH, true, false, Assets.horizontalBattleship!!, Assets.verticalBattleship!!, Assets.horizontalBattleshipFlames!!, Assets.verticalBattleshipFlames!!, false)
@@ -120,10 +103,9 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
     val rshippatrolThree = ShipClass("ShippatrolThree", 0, 0, Assets.SHIP_PATROL_LENGTH, true, false, Assets.horizontalShipPatrol!!, Assets.verticalShipPatrol!!, Assets.horizontalShipPatrolFlames!!, Assets.verticalShipPatrolFlames!!, false)
     val rshippatrolFour = ShipClass("ShippatrolFour", 0, 0, Assets.SHIP_PATROL_LENGTH, true, false, Assets.horizontalShipPatrol!!, Assets.verticalShipPatrol!!, Assets.horizontalShipPatrolFlames!!, Assets.verticalShipPatrolFlames!!, false)
 
-
     var shipList : MutableList<ShipClass> = mutableListOf(carrier, battleshipOne, battleshipTwo, shiprescueOne, shiprescueTwo, shiprescueThree, shippatrolOne, shippatrolTwo, shippatrolThree, shippatrolFour)
     var rshipList : MutableList<ShipClass> = mutableListOf(rcarrier, rbattleshipOne, rbattleshipTwo, rshiprescueOne, rshiprescueTwo, rshiprescueThree, rshippatrolOne, rshippatrolTwo, rshippatrolThree, rshippatrolFour)
-    var defaultShipPositions : MutableList<CellDataClass> = mutableListOf(carrierDefaultPosition, battleshipOneDefaultPosition, battleshipTwoDefaultPosition, shiprescueOneDefaultPosition, shiprescueTwoDefaultPosition, shiprescueThreeDefaultPosition, shippatrolOneDefaultPosition, shippatrolTwoDefaultPosition, shippatrolThreeDefaultPosition, shippatrolFourDefaultPosition)
+
 
     override fun onUpdate(deltaTime: Float, touchEvents: MutableList<TouchHandler.TouchEvent>?) {
         if (touchEvents != null) {
@@ -134,7 +116,7 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
                     TouchHandler.TouchType.TOUCH_DOWN -> {
                         // ACTIONS FOR TOUCH_DOWN
                         // Placing ships phase
-                        if (placingShips) {
+                        if (model.state == SeaBattleAction.PLACE_SHIPS) {
                             draggedBoat = null
                             clickedShip = false
                             if (model.clickedOnBoat(CellDataClass(correctedEventX, correctedEventY), shipList)) {
@@ -149,14 +131,14 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
                     TouchHandler.TouchType.TOUCH_DRAGGED -> {
                         // ACTIONS FOR TOUCH_DRAGGED
                         // Placing ships phase
-                        if (placingShips) {
+                        if (model.state == SeaBattleAction.PLACE_SHIPS) {
                             draggingShip = true
                             if (clickedShip) {
                                 model.moveBoat(CellDataClass(correctedEventX, correctedEventY), draggedBoat!!)
 
                                 // Update cells
                                 model.resetWaterCells(playerBoard)
-                                if (model.checkPosition(CellDataClass(correctedEventX, correctedEventY), draggedBoat!!, playerBoard)) {
+                                if (model.checkPosition(CellDataClass(correctedEventX, correctedEventY), draggedBoat!!, playerBoard) && !model.checkIfThereIsBoat(draggedBoat!!, playerBoard)) {
                                     model.changeWaterCells(playerBoard)
                                 }
 
@@ -173,7 +155,7 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
                     TouchHandler.TouchType.TOUCH_UP -> {
                         // ACTIONS FOR TOUCH_UP
                         // Placing ships phase
-                        if (placingShips) {
+                        if (model.state == SeaBattleAction.PLACE_SHIPS) {
                             clickedShip = false
                             if (!draggingShip && draggedBoat != null) {
                                 if (model.checkRotation(draggedBoat!!, playerBoard)) {
@@ -188,7 +170,7 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
 
                             else if (draggedBoat != null) {
                                 if (!model.checkPosition(CellDataClass(correctedEventX, correctedEventY), draggedBoat!!, playerBoard)) {
-                                    model.resetPosition(draggedBoat!!, defaultShipPositions)
+                                    model.resetPosition(draggedBoat!!, playerBoard)
                                     model.resetBoardOfBoat(draggedBoat!!, playerBoard)
                                     model.resetWaterCells(playerBoard)
                                 }
@@ -199,8 +181,7 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
                                         model.colocateShip(draggedBoat!!, playerBoard)
                                     }
                                     else {
-                                        model.resetBoardOfBoat(draggedBoat!!, playerBoard)
-                                        model.resetPosition(draggedBoat!!, defaultShipPositions)
+                                        model.resetPosition(draggedBoat!!, playerBoard)
                                     }
                                 }
                                 model.resetWaterCells(playerBoard)
@@ -212,17 +193,17 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
                         // Ships placed
                         if (drawButton) {
                             if (model.checkIfButtonPressed(CellDataClass(correctedEventX, correctedEventY))) {
-                                placingShips = false
                                 rival = true
                                 drawButton = false
 
-                                rivalModel.generateNewBoard(rivalBoard, rshipList)
-                                playingGame = true
-                                gameState = "Play game"
+                                model.generateNewBoard(rivalBoard, rshipList)
                             }
                         }
 
                         // Playing game phase
+                        if (model.state == SeaBattleAction.PLAYER_TURN) {
+
+                        }
                     }
                 }
             }
@@ -230,7 +211,7 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
 
         // ACTIONS WHICH NOT DEPEND ON USER'S TOUCHES (UPDATES)
         // Placing ships phase
-        if (placingShips) {
+        if (model.state == SeaBattleAction.PLACE_SHIPS) {
             drawButton = model.checkBoatsPlaced(shipList)
         }
 
@@ -241,14 +222,20 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
         graphics.clear(Color.WHITE)
 
         drawBoard(player, rival)
-        drawText(gameState)
+        drawText(model.state)
         drawBoats()
-        /*if (playingGame)
+        /*if (model.state == SeaBattleAction.PLAYER_TURN)
             drawRBoats()
         */
         drawBattleButton(drawButton)
+        if (model.state == SeaBattleAction.PLAYER_TURN)
+            drawArrows()
 
         return graphics.frameBuffer
+    }
+
+    private fun drawArrows() {
+        graphics.drawBitmap(Assets.yellowArrows, (originX + ((playerBoard.boardWidth - 2) * cellSide)).toFloat(), (originY + ((playerBoard.boardHeight + 0.5) * cellSide)).toFloat())
     }
 
     private fun drawBoard(player : Boolean, rival : Boolean) {
@@ -269,29 +256,29 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
         }
     }
 
-    private fun drawText(state : String) {
+    private fun drawText(state: SeaBattleAction) {
         graphics.setTextSize(90)
         graphics.setTextAlign(Paint.Align.CENTER)
         graphics.setTextColor(Color.parseColor("#FFBF00"))
         graphics.setTypeface(myTypeface)
 
-        if (state == "Place ships"){
+        if (state == SeaBattleAction.PLACE_SHIPS){
             graphics.drawText(originX + (cellSide * 11), (originY - (cellSide * 0.75)).toFloat(), "Time to place your ships!!")
         }
 
-        else if (state == "Prepare battle") {
-            graphics.drawText(originX + (cellSide * 11), (originY - (cellSide * 0.75)).toFloat(), "Ready to battle?")
+        else if (state == SeaBattleAction.PLAYER_TURN) {
+            graphics.drawText(originX + (cellSide * 11), (originY - (cellSide * 0.75)).toFloat(), "Your turn! Sink the enemy's navy!")
         }
 
-        else if (state == "Play game") {
-            graphics.drawText(originX + (cellSide * 11), (originY - (cellSide * 0.75)).toFloat(), "Sink the enemy's navy!")
+        else if (state == SeaBattleAction.COMPUTER_TURN) {
+            graphics.drawText(originX + (cellSide * 11), (originY - (cellSide * 0.75)).toFloat(), "Watch out! It the turn or your rival!")
         }
 
-        else if (state == "Win") {
+        else if (state == SeaBattleAction.END_WIN) {
             graphics.drawText(originX + (cellSide * 11), (originY - (cellSide * 0.75)).toFloat(), "Congrats!! You won the game!")
         }
 
-        else if (state == "Lose") {
+        else if (state == SeaBattleAction.END_LOSE) {
             graphics.drawText(originX + (cellSide * 11), (originY - (cellSide * 0.75)).toFloat(), "Oh no!! You lost!")
         }
     }
@@ -327,7 +314,6 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
             graphics.drawRect(originX2 + (cellSide * 5), originY2 + (cellSide * 6), cellSide*4, cellSide * 4, Color.parseColor("#FFBF00"))
             graphics.setTextColor(Color.BLACK)
             graphics.drawText(originX2 + (cellSide * 7), (originY2 + (cellSide * 8.25)).toFloat(), "Battle!")
-            gameState = "Prepare battle"
         }
     }
 }

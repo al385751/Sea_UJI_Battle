@@ -1,11 +1,25 @@
 package com.example.a2_seaujibattle.model
 
 import android.util.Log
+import com.example.a2_seaujibattle.additionalClasses.BoardCellClass
 import com.example.a2_seaujibattle.additionalClasses.BoardClass
 import com.example.a2_seaujibattle.additionalClasses.CellDataClass
 import com.example.a2_seaujibattle.additionalClasses.ShipClass
+import com.example.a2_seaujibattle.controller.SeaUjiBattleController
+
+enum class SeaBattleAction {
+    PLACE_SHIPS,
+    PLAYER_TURN,
+    COMPUTER_TURN,
+    WAITING,
+    END_WIN,
+    END_LOSE
+}
 
 class Model {
+    var state = SeaBattleAction.PLACE_SHIPS
+        private set
+
     fun clickedOnBoat(coord : CellDataClass, shipList : MutableList<ShipClass>) : Boolean {
         for (ship in shipList) {
             if (ship.isHorizontal) {
@@ -47,6 +61,25 @@ class Model {
     fun moveBoat(coord: CellDataClass, ship: ShipClass) {
         ship.x = coord.x
         ship.y = coord.y
+        if (ship.shipLength == 4 && ship.x > 20) {
+                ship.x = 20
+        }
+
+        else if (ship.shipLength == 3 && ship.x > 21) {
+            ship.x = 21
+        }
+
+        else if (ship.shipLength == 2 && ship.x > 22) {
+            ship.x = 22
+        }
+
+        else if (ship.shipLength == 1 && ship.x > 23) {
+            ship.x = 23
+        }
+
+        if (ship.y > 13) {
+            ship.y = 13
+        }
     }
 
     fun rotateBoat(ship : ShipClass) {
@@ -102,77 +135,11 @@ class Model {
         }
     }
 
-    fun resetPosition(ship: ShipClass, defaultShips: MutableList<CellDataClass>) {
-        ship.placed = false
-        if (ship.name == "Carrier") {
-            ship.x = defaultShips[0].x
-            ship.y = defaultShips[0].y
-            ship.isHorizontal = true
-            ship.activeBitmap = ship.horizontalBoat
-        }
-
-        else if (ship.name == "BattleshipOne") {
-            ship.x = defaultShips[1].x
-            ship.y = defaultShips[1].y
-            ship.isHorizontal = true
-            ship.activeBitmap = ship.horizontalBoat
-        }
-
-        else if (ship.name == "BattleshipTwo") {
-            ship.x = defaultShips[2].x
-            ship.y = defaultShips[2].y
-            ship.isHorizontal = true
-            ship.activeBitmap = ship.horizontalBoat
-        }
-
-        else if (ship.name == "ShiprescueOne") {
-            ship.x = defaultShips[3].x
-            ship.y = defaultShips[3].y
-            ship.isHorizontal = true
-            ship.activeBitmap = ship.horizontalBoat
-        }
-
-        else if (ship.name == "ShiprescueTwo") {
-            ship.x = defaultShips[4].x
-            ship.y = defaultShips[4].y
-            ship.isHorizontal = true
-            ship.activeBitmap = ship.horizontalBoat
-        }
-
-        else if (ship.name == "ShiprescueThree") {
-            ship.x = defaultShips[5].x
-            ship.y = defaultShips[5].y
-            ship.isHorizontal = true
-            ship.activeBitmap = ship.horizontalBoat
-        }
-
-        else if (ship.name == "ShippatrolOne") {
-            ship.x = defaultShips[6].x
-            ship.y = defaultShips[6].y
-            ship.isHorizontal = true
-            ship.activeBitmap = ship.horizontalBoat
-        }
-
-        else if (ship.name == "ShippatrolTwo") {
-            ship.x = defaultShips[7].x
-            ship.y = defaultShips[7].y
-            ship.isHorizontal = true
-            ship.activeBitmap = ship.horizontalBoat
-        }
-
-        else if (ship.name == "ShippatrolThree") {
-            ship.x = defaultShips[8].x
-            ship.y = defaultShips[8].y
-            ship.isHorizontal = true
-            ship.activeBitmap = ship.horizontalBoat
-        }
-
-        else if (ship.name == "ShippatrolFour") {
-            ship.x = defaultShips[9].x
-            ship.y = defaultShips[9].y
-            ship.isHorizontal = true
-            ship.activeBitmap = ship.horizontalBoat
-        }
+    fun resetPosition(ship: ShipClass, board: BoardClass) {
+        if (!board.coordInsideBoard(ship.defaultPosition))
+            ship.placed = false
+        ship.x = ship.defaultPosition.x
+        ship.y = ship.defaultPosition.y
     }
 
     fun checkRotation(ship: ShipClass, board: BoardClass): Boolean {
@@ -203,10 +170,13 @@ class Model {
     }
 
     fun colocateShip(ship: ShipClass, board: BoardClass) {
+        ship.defaultPosition.x = ship.x
+        ship.defaultPosition.y = ship.y
         if (ship.isHorizontal) {
             for (i in 0 until ship.shipLength) {
                 val overCell = board.getCellInFirstBoard(CellDataClass(ship.x + i, ship.y))
                 overCell!!.hasBoat = ship.name
+                overCell.partOfBoat = i + 1
             }
             ship.placed = true
         }
@@ -215,6 +185,7 @@ class Model {
             for (i in 0 until ship.shipLength) {
                 val overCell = board.getCellInFirstBoard(CellDataClass(ship.x, ship.y + i))
                 overCell!!.hasBoat = ship.name
+                overCell.partOfBoat = i + 1
             }
             ship.placed = true
         }
@@ -225,6 +196,7 @@ class Model {
             for (cell in row) {
                 if (cell.hasBoat == ship.name) {
                     cell.hasBoat = ""
+                    cell.partOfBoat = -1
                 }
             }
         }
@@ -276,5 +248,89 @@ class Model {
                 return true
         }
         return false
+    }
+
+    fun generateNewBoard(board: BoardClass, shipList : MutableList<ShipClass>) {
+        state = SeaBattleAction.PLAYER_TURN
+        for (boat in shipList) {
+            val random = (0 until 2).random()
+            boat.isHorizontal = random == 0
+            if (!boat.isHorizontal)
+                boat.activeBitmap = boat.verticalBoat
+        }
+
+        for (boat in shipList) {
+            var placed = false
+            while (!placed) {
+                boat.x = board.coordTL.x + (0 until board.boardWidth).random()
+                boat.y = board.coordTL.y + (0 until board.boardHeight).random()
+                if (boat.isHorizontal) {
+                    placed = true
+                    if (!checkIfThereIsBoatInSecondBoard(boat, board)) {
+                        for (i in 0 until boat.shipLength) {
+                            if (!board.coordInsideBoard(CellDataClass(boat.x + i, boat.y))) {
+                                placed = false
+                            }
+                        }
+                    }
+                    else placed = false
+                }
+
+                else {
+                    placed = true
+                    if (!checkIfThereIsBoatInSecondBoard(boat, board)) {
+                        for (i in 0 until boat.shipLength) {
+                            if (!board.coordInsideBoard(CellDataClass(boat.x, boat.y + i))) {
+                                placed = false
+                            }
+                        }
+                    }
+                    else placed = false
+                }
+            }
+
+            if (boat.isHorizontal) {
+                for (i in 0 until boat.shipLength) {
+                    val cell : BoardCellClass? = board.getCellInSecondBoard(CellDataClass(boat.x + i, boat.y))
+                    cell!!.hasBoat = boat.name
+                    cell.partOfBoat = i + 1
+                }
+            }
+
+            else {
+                for (i in 0 until boat.shipLength) {
+                    val cell : BoardCellClass? = board.getCellInSecondBoard(CellDataClass(boat.x, boat.y + i))
+                    cell!!.hasBoat = boat.name
+                    cell.partOfBoat = i + 1
+                }
+            }
+        }
+    }
+
+    fun checkIfThereIsBoatInSecondBoard(ship: ShipClass, board: BoardClass) : Boolean {
+        if (ship.isHorizontal) {
+            for (i in 0 until ship.shipLength) {
+                if (board.coordInsideBoard(CellDataClass(ship.x + i, ship.y))) {
+                    val overCell = board.getCellInSecondBoard(CellDataClass(ship.x + i, ship.y))
+                    if (overCell!!.hasBoat != "" && overCell.hasBoat != ship.name) {
+                        return true
+                    }
+                }
+                else return true
+            }
+            return false
+        }
+        else {
+            for (i in 0 until ship.shipLength) {
+                if (board.coordInsideBoard(CellDataClass(ship.x, ship.y + i))) {
+                    val overCell = board.getCellInSecondBoard(CellDataClass(ship.x, ship.y + i))
+                    if (overCell!!.hasBoat != "" && overCell.hasBoat != ship.name) {
+                        return true
+                    }
+                }
+                else return true
+            }
+            return false
+        }
     }
 }

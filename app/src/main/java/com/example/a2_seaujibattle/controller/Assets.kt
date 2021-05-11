@@ -48,6 +48,8 @@ object Assets {
     var verticalShipPatrol : Bitmap? = null
     var verticalShipPatrolFlames : Bitmap? = null
 
+    var yellowArrows : Bitmap? = null
+
     private var splash : SpriteSheet? = null
     var waterSplash : AnimatedBitmap? = null
     private var explosion : SpriteSheet? = null
@@ -152,6 +154,11 @@ object Assets {
         verticalShipPatrolFlames = Bitmap.createScaledBitmap(
                 BitmapFactory.decodeResource(resources, R.drawable.shippatrolverticalflames),
                 cellSize, cellSize * SHIP_PATROL_LENGTH, true)
+
+        yellowArrows?.recycle()
+        yellowArrows = Bitmap.createScaledBitmap(
+                BitmapFactory.decodeResource(resources, R.drawable.yellowarrows),
+                cellSize * 6, (cellSize * 1.05).toInt(), true)
 
         val framesWater = ArrayList<Bitmap>()
         waterSplash?.recycle()

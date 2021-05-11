@@ -18,4 +18,5 @@ class ShipClass(_name : String, _x: Int, _y: Int, _shipLength: Int, _isHorizonta
     var placed = _placed
 
     var activeBitmap: Bitmap = _horizontalBoat
+    var defaultPosition : CellDataClass = CellDataClass(_x, _y)
 }
