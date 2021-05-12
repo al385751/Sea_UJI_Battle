@@ -1,24 +1,26 @@
 package com.example.a2_seaujibattle.model
 
-import android.util.Log
-import com.example.a2_seaujibattle.additionalClasses.BoardCellClass
-import com.example.a2_seaujibattle.additionalClasses.BoardClass
-import com.example.a2_seaujibattle.additionalClasses.CellDataClass
-import com.example.a2_seaujibattle.additionalClasses.ShipClass
-import com.example.a2_seaujibattle.controller.SeaUjiBattleController
+import android.media.SoundPool
+import com.example.a2_seaujibattle.additionalClasses.*
 
 enum class SeaBattleAction {
     PLACE_SHIPS,
     PLAYER_TURN,
     COMPUTER_TURN,
-    WAITING,
+    WAITING_WATER,
+    WAITING_EXPLOSION,
     END_WIN,
     END_LOSE
 }
 
-class Model {
+interface SoundPlayer {
+    fun playSelectedSound(sound : Int)
+}
+
+class Model(pool: SoundPool) : SoundPlayer {
     var state = SeaBattleAction.PLACE_SHIPS
         private set
+    var soundPool : SoundPool = pool
 
     fun clickedOnBoat(coord : CellDataClass, shipList : MutableList<ShipClass>) : Boolean {
         for (ship in shipList) {
@@ -332,5 +334,19 @@ class Model {
             }
             return false
         }
+    }
+
+    fun changeAnimationPosition(animation: Animation, cell: CellDataClass, newState: SeaBattleAction) {
+        state = newState
+        animation.x = cell.x
+        animation.y = cell.y
+    }
+
+    fun changeGameState(gameState: SeaBattleAction) {
+        state = gameState
+    }
+
+    override fun playSelectedSound(sound: Int) {
+        soundPool.play(sound, 1F, 1F, 1, 0, 1F)
     }
 }

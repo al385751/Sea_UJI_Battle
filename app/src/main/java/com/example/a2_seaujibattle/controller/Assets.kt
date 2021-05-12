@@ -20,13 +20,14 @@ object Assets {
     private const val SPLASH_HEIGHT = 33
 
     private const val EXPLOSION_ROWS = 5
-    private const val EXPLOSION_COLUMNS = 10
-    private const val EXPLOSION_WIDTH = 10
-    private const val EXPLOSION_HEIGHT = 10
+    private const val EXPLOSION_COLUMNS = 5
+    private const val EXPLOSION_WIDTH = 64
+    private const val EXPLOSION_HEIGHT = 64
 
     var waterUntouched : Bitmap? = null
     var waterTouched : Bitmap? = null
     var waterOver : Bitmap? = null
+    var waterExploded : Bitmap? = null
 
     var horizontalCarrier : Bitmap? = null
     var horizontalCarrierFlames : Bitmap? = null
@@ -85,6 +86,11 @@ object Assets {
         waterOver?.recycle()
         waterOver = Bitmap.createScaledBitmap(
                 BitmapFactory.decodeResource(resources, R.drawable.waterover),
+                (cellSize * 1.05).toInt(), (cellSize * 1.05).toInt(), true)
+
+        waterExploded?.recycle()
+        waterExploded = Bitmap.createScaledBitmap(
+                BitmapFactory.decodeResource(resources, R.drawable.waterexploded),
                 (cellSize * 1.05).toInt(), (cellSize * 1.05).toInt(), true)
 
         horizontalCarrier?.recycle()
@@ -163,15 +169,15 @@ object Assets {
         val framesWater = ArrayList<Bitmap>()
         waterSplash?.recycle()
         for (row in 0 until SPLASH_ROWS) {
-            splash?.let { framesWater.addAll(it.getScaledRow(row, SPLASH_COLUMNS, cellSize, cellSize)) }
+            splash?.let { framesWater.addAll(it.getScaledRow(row, SPLASH_COLUMNS, (cellSize * 1.05).toInt(), (cellSize * 1.05).toInt())) }
         }
-        waterSplash = AnimatedBitmap(2.0f, false, *framesWater.toTypedArray())
+        waterSplash = AnimatedBitmap(1.0f, false, *framesWater.toTypedArray())
 
         val framesFire = ArrayList<Bitmap>()
         fireExplosion?.recycle()
         for (row in 0 until EXPLOSION_ROWS) {
-            explosion?.let { framesFire.addAll(it.getScaledRow(row, EXPLOSION_COLUMNS, cellSize, cellSize)) }
+            explosion?.let { framesFire.addAll(it.getScaledRow(row, EXPLOSION_COLUMNS, (cellSize * 1.05).toInt(), (cellSize * 1.05).toInt())) }
         }
-        fireExplosion = AnimatedBitmap(2.0f, false, *framesFire.toTypedArray())
+        fireExplosion = AnimatedBitmap(1.0f, false, *framesFire.toTypedArray())
     }
 }

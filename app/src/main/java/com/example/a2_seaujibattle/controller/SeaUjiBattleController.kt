@@ -4,13 +4,11 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Paint
-import android.util.Log
+import android.media.AudioAttributes
+import android.media.SoundPool
 import androidx.core.content.res.ResourcesCompat
 import com.example.a2_seaujibattle.R
-import com.example.a2_seaujibattle.additionalClasses.BoardCellClass
-import com.example.a2_seaujibattle.additionalClasses.BoardClass
-import com.example.a2_seaujibattle.additionalClasses.CellDataClass
-import com.example.a2_seaujibattle.additionalClasses.ShipClass
+import com.example.a2_seaujibattle.additionalClasses.*
 import com.example.a2_seaujibattle.model.Model
 import com.example.a2_seaujibattle.model.SeaBattleAction
 import es.uji.vj1229.framework.Graphics
@@ -22,7 +20,7 @@ import kotlin.math.min
 private const val TOTAL_CELLS_WIDTH  = 24
 private const val TOTAL_CELLS_HEIGHT  = 14
 
-class SeaUjiBattleController(width: Int, height: Int, applicationContext: Context) : IGameController {
+class SeaUjiBattleController(width: Int, height: Int, applicationContext: Context, _soundEffects: String, _smartOpponent: String) : IGameController {
     private val cellSide : Float = min(width.toFloat() / TOTAL_CELLS_WIDTH,
         height.toFloat() / TOTAL_CELLS_HEIGHT)
 
@@ -44,16 +42,23 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
     val drawnPlayerBoard : MutableList<MutableList<BoardCellClass>> = mutableListOf()
     val drawnRivalBoard : MutableList<MutableList<BoardCellClass>> = mutableListOf()
 
-    val model : Model = Model()
+    val soundEffects : Boolean = _soundEffects.toBoolean()
+    val smartOpponent : Boolean = _smartOpponent.toBoolean()
 
     var draggingShip : Boolean = false
     var clickedShip : Boolean = false
     var draggedBoat : ShipClass? = null
+    var hittedBoat : ShipClass? = null
+    var hittedCells : MutableList<BoardCellClass> = mutableListOf()
 
     var drawButton : Boolean = false
 
     var player : Boolean = true
     var rival : Boolean = false
+
+    var soundPool : SoundPool
+    var waterSound : Int
+    var explosionSound : Int
 
     init {
         Assets.loadDrawableAssets(applicationContext)
@@ -63,7 +68,7 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
         for (row in 0 until playerBoard.boardHeight) {
             columnBoard = mutableListOf()
             for (col in 0 until playerBoard.boardWidth) {
-                val actualCellBoard = BoardCellClass(CellDataClass(row, col), Assets.waterUntouched!!, Assets.waterOver!!, Assets.waterTouched!!, false, false)
+                val actualCellBoard = BoardCellClass(CellDataClass(row, col), Assets.waterUntouched!!, Assets.waterOver!!, Assets.waterTouched!!, Assets.waterExploded!!, false, false)
                 columnBoard.add(actualCellBoard)
             }
             drawnPlayerBoard.add(columnBoard)
@@ -73,39 +78,55 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
         for (row in 0 until rivalBoard.boardHeight) {
             columnBoard = mutableListOf()
             for (col in 0 until rivalBoard.boardWidth) {
-                val actualCellBoard = BoardCellClass(CellDataClass(row, col), Assets.waterUntouched!!, Assets.waterOver!!, Assets.waterTouched!!, false, false)
+                val actualCellBoard = BoardCellClass(CellDataClass(row, col), Assets.waterUntouched!!, Assets.waterOver!!, Assets.waterTouched!!, Assets.waterExploded!!, false, false)
                 columnBoard.add(actualCellBoard)
             }
             drawnRivalBoard.add(columnBoard)
         }
         rivalBoard.board = drawnRivalBoard
+
+        val audioAttributes : AudioAttributes = AudioAttributes.Builder()
+                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                .setUsage(AudioAttributes.USAGE_GAME)
+                .build()
+
+        soundPool = SoundPool.Builder()
+                .setMaxStreams(1)
+                .setAudioAttributes(audioAttributes)
+                .build()
+
+        waterSound = soundPool.load(applicationContext, R.raw.watersplash, 1)
+        explosionSound = soundPool.load(applicationContext, R.raw.explosion, 1)
     }
 
-    val carrier = ShipClass("Carrier",((originX2 - xOffset + cellSide) / cellSide).toInt(), ((originY2 - yOffset + cellSide) / cellSide).toInt(), Assets.CARRIER_LENGTH, true, false, Assets.horizontalCarrier!!, Assets.verticalCarrier!!, Assets.horizontalCarrierFlames!!, Assets.verticalCarrierFlames!!, false)
-    val battleshipOne = ShipClass("BattleshipOne", ((originX2 - xOffset + cellSide) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 3)) / cellSide).toInt(), Assets.BATTLESHIP_LENGTH, true, false, Assets.horizontalBattleship!!, Assets.verticalBattleship!!, Assets.horizontalBattleshipFlames!!, Assets.verticalBattleshipFlames!!, false)
-    val battleshipTwo = ShipClass("BattleshipTwo", ((originX2 - xOffset + (cellSide * 5)) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 3)) / cellSide).toInt(), Assets.BATTLESHIP_LENGTH, true, false, Assets.horizontalBattleship!!, Assets.verticalBattleship!!, Assets.horizontalBattleshipFlames!!, Assets.verticalBattleshipFlames!!, false)
-    val shiprescueOne = ShipClass("ShiprescueOne", ((originX2 - xOffset + cellSide) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 5)) / cellSide).toInt(), Assets.SHIP_RESCUE_LENGTH, true, false, Assets.horizontalShipRescue!!, Assets.verticalShipRescue!!, Assets.horizontalShipRescueFlames!!, Assets.verticalShipRescueFlames!!, false)
-    val shiprescueTwo = ShipClass("ShiprescueTwo", ((originX2 - xOffset + (cellSide * 4)) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 5)) / cellSide).toInt(), Assets.SHIP_RESCUE_LENGTH, true, false, Assets.horizontalShipRescue!!, Assets.verticalShipRescue!!, Assets.horizontalShipRescueFlames!!, Assets.verticalShipRescueFlames!!, false)
-    val shiprescueThree = ShipClass("ShiprescueThree", ((originX2 - xOffset + (cellSide * 7)) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 5)) / cellSide).toInt(), Assets.SHIP_RESCUE_LENGTH, true, false, Assets.horizontalShipRescue!!, Assets.verticalShipRescue!!, Assets.horizontalShipRescueFlames!!, Assets.verticalShipRescueFlames!!, false)
-    val shippatrolOne = ShipClass("ShippatrolOne", ((originX2 - xOffset + cellSide) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 7)) / cellSide).toInt(), Assets.SHIP_PATROL_LENGTH, true, false, Assets.horizontalShipPatrol!!, Assets.verticalShipPatrol!!, Assets.horizontalShipPatrolFlames!!, Assets.verticalShipPatrolFlames!!, false)
-    val shippatrolTwo = ShipClass("ShippatrolTwo", ((originX2 - xOffset + (cellSide * 3)) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 7)) / cellSide).toInt(), Assets.SHIP_PATROL_LENGTH, true, false, Assets.horizontalShipPatrol!!, Assets.verticalShipPatrol!!, Assets.horizontalShipPatrolFlames!!, Assets.verticalShipPatrolFlames!!, false)
-    val shippatrolThree = ShipClass("ShippatrolThree", ((originX2 - xOffset + (cellSide * 5)) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 7)) / cellSide).toInt(), Assets.SHIP_PATROL_LENGTH, true, false, Assets.horizontalShipPatrol!!, Assets.verticalShipPatrol!!, Assets.horizontalShipPatrolFlames!!, Assets.verticalShipPatrolFlames!!, false)
-    val shippatrolFour = ShipClass("ShippatrolFour", ((originX2 - xOffset + (cellSide * 7)) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 7)) / cellSide).toInt(), Assets.SHIP_PATROL_LENGTH, true, false, Assets.horizontalShipPatrol!!, Assets.verticalShipPatrol!!, Assets.horizontalShipPatrolFlames!!, Assets.verticalShipPatrolFlames!!, false)
+    val model : Model = Model(soundPool)
 
-    val rcarrier = ShipClass("Carrier",0, 0, Assets.CARRIER_LENGTH, true, false, Assets.horizontalCarrier!!, Assets.verticalCarrier!!, Assets.horizontalCarrierFlames!!, Assets.verticalCarrierFlames!!, false)
-    val rbattleshipOne = ShipClass("BattleshipOne", 0, 0, Assets.BATTLESHIP_LENGTH, true, false, Assets.horizontalBattleship!!, Assets.verticalBattleship!!, Assets.horizontalBattleshipFlames!!, Assets.verticalBattleshipFlames!!, false)
-    val rbattleshipTwo = ShipClass("BattleshipTwo", 0, 0, Assets.BATTLESHIP_LENGTH, true, false, Assets.horizontalBattleship!!, Assets.verticalBattleship!!, Assets.horizontalBattleshipFlames!!, Assets.verticalBattleshipFlames!!, false)
-    val rshiprescueOne = ShipClass("ShiprescueOne", 0, 0, Assets.SHIP_RESCUE_LENGTH, true, false, Assets.horizontalShipRescue!!, Assets.verticalShipRescue!!, Assets.horizontalShipRescueFlames!!, Assets.verticalShipRescueFlames!!, false)
-    val rshiprescueTwo = ShipClass("ShiprescueTwo", 0, 0, Assets.SHIP_RESCUE_LENGTH, true, false, Assets.horizontalShipRescue!!, Assets.verticalShipRescue!!, Assets.horizontalShipRescueFlames!!, Assets.verticalShipRescueFlames!!, false)
-    val rshiprescueThree = ShipClass("ShiprescueThree", 0, 0, Assets.SHIP_RESCUE_LENGTH, true, false, Assets.horizontalShipRescue!!, Assets.verticalShipRescue!!, Assets.horizontalShipRescueFlames!!, Assets.verticalShipRescueFlames!!, false)
-    val rshippatrolOne = ShipClass("ShippatrolOne", 0, 0, Assets.SHIP_PATROL_LENGTH, true, false, Assets.horizontalShipPatrol!!, Assets.verticalShipPatrol!!, Assets.horizontalShipPatrolFlames!!, Assets.verticalShipPatrolFlames!!, false)
-    val rshippatrolTwo = ShipClass("ShippatrolTwo", 0, 0, Assets.SHIP_PATROL_LENGTH, true, false, Assets.horizontalShipPatrol!!, Assets.verticalShipPatrol!!, Assets.horizontalShipPatrolFlames!!, Assets.verticalShipPatrolFlames!!, false)
-    val rshippatrolThree = ShipClass("ShippatrolThree", 0, 0, Assets.SHIP_PATROL_LENGTH, true, false, Assets.horizontalShipPatrol!!, Assets.verticalShipPatrol!!, Assets.horizontalShipPatrolFlames!!, Assets.verticalShipPatrolFlames!!, false)
-    val rshippatrolFour = ShipClass("ShippatrolFour", 0, 0, Assets.SHIP_PATROL_LENGTH, true, false, Assets.horizontalShipPatrol!!, Assets.verticalShipPatrol!!, Assets.horizontalShipPatrolFlames!!, Assets.verticalShipPatrolFlames!!, false)
+    val carrier = ShipClass("Carrier",((originX2 - xOffset + cellSide) / cellSide).toInt(), ((originY2 - yOffset + cellSide) / cellSide).toInt(), Assets.CARRIER_LENGTH, true, false, Assets.horizontalCarrier!!, Assets.verticalCarrier!!, Assets.horizontalCarrierFlames!!, Assets.verticalCarrierFlames!!, false, 0)
+    val battleshipOne = ShipClass("BattleshipOne", ((originX2 - xOffset + cellSide) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 3)) / cellSide).toInt(), Assets.BATTLESHIP_LENGTH, true, false, Assets.horizontalBattleship!!, Assets.verticalBattleship!!, Assets.horizontalBattleshipFlames!!, Assets.verticalBattleshipFlames!!, false, 0)
+    val battleshipTwo = ShipClass("BattleshipTwo", ((originX2 - xOffset + (cellSide * 5)) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 3)) / cellSide).toInt(), Assets.BATTLESHIP_LENGTH, true, false, Assets.horizontalBattleship!!, Assets.verticalBattleship!!, Assets.horizontalBattleshipFlames!!, Assets.verticalBattleshipFlames!!, false, 0)
+    val shiprescueOne = ShipClass("ShiprescueOne", ((originX2 - xOffset + cellSide) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 5)) / cellSide).toInt(), Assets.SHIP_RESCUE_LENGTH, true, false, Assets.horizontalShipRescue!!, Assets.verticalShipRescue!!, Assets.horizontalShipRescueFlames!!, Assets.verticalShipRescueFlames!!, false, 0)
+    val shiprescueTwo = ShipClass("ShiprescueTwo", ((originX2 - xOffset + (cellSide * 4)) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 5)) / cellSide).toInt(), Assets.SHIP_RESCUE_LENGTH, true, false, Assets.horizontalShipRescue!!, Assets.verticalShipRescue!!, Assets.horizontalShipRescueFlames!!, Assets.verticalShipRescueFlames!!, false, 0)
+    val shiprescueThree = ShipClass("ShiprescueThree", ((originX2 - xOffset + (cellSide * 7)) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 5)) / cellSide).toInt(), Assets.SHIP_RESCUE_LENGTH, true, false, Assets.horizontalShipRescue!!, Assets.verticalShipRescue!!, Assets.horizontalShipRescueFlames!!, Assets.verticalShipRescueFlames!!, false, 0)
+    val shippatrolOne = ShipClass("ShippatrolOne", ((originX2 - xOffset + cellSide) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 7)) / cellSide).toInt(), Assets.SHIP_PATROL_LENGTH, true, false, Assets.horizontalShipPatrol!!, Assets.verticalShipPatrol!!, Assets.horizontalShipPatrolFlames!!, Assets.verticalShipPatrolFlames!!, false, 0)
+    val shippatrolTwo = ShipClass("ShippatrolTwo", ((originX2 - xOffset + (cellSide * 3)) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 7)) / cellSide).toInt(), Assets.SHIP_PATROL_LENGTH, true, false, Assets.horizontalShipPatrol!!, Assets.verticalShipPatrol!!, Assets.horizontalShipPatrolFlames!!, Assets.verticalShipPatrolFlames!!, false, 0)
+    val shippatrolThree = ShipClass("ShippatrolThree", ((originX2 - xOffset + (cellSide * 5)) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 7)) / cellSide).toInt(), Assets.SHIP_PATROL_LENGTH, true, false, Assets.horizontalShipPatrol!!, Assets.verticalShipPatrol!!, Assets.horizontalShipPatrolFlames!!, Assets.verticalShipPatrolFlames!!, false, 0)
+    val shippatrolFour = ShipClass("ShippatrolFour", ((originX2 - xOffset + (cellSide * 7)) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 7)) / cellSide).toInt(), Assets.SHIP_PATROL_LENGTH, true, false, Assets.horizontalShipPatrol!!, Assets.verticalShipPatrol!!, Assets.horizontalShipPatrolFlames!!, Assets.verticalShipPatrolFlames!!, false, 0)
+
+    val rcarrier = ShipClass("Carrier",0, 0, Assets.CARRIER_LENGTH, true, false, Assets.horizontalCarrier!!, Assets.verticalCarrier!!, Assets.horizontalCarrierFlames!!, Assets.verticalCarrierFlames!!, false, 0)
+    val rbattleshipOne = ShipClass("BattleshipOne", 0, 0, Assets.BATTLESHIP_LENGTH, true, false, Assets.horizontalBattleship!!, Assets.verticalBattleship!!, Assets.horizontalBattleshipFlames!!, Assets.verticalBattleshipFlames!!, false, 0)
+    val rbattleshipTwo = ShipClass("BattleshipTwo", 0, 0, Assets.BATTLESHIP_LENGTH, true, false, Assets.horizontalBattleship!!, Assets.verticalBattleship!!, Assets.horizontalBattleshipFlames!!, Assets.verticalBattleshipFlames!!, false, 0)
+    val rshiprescueOne = ShipClass("ShiprescueOne", 0, 0, Assets.SHIP_RESCUE_LENGTH, true, false, Assets.horizontalShipRescue!!, Assets.verticalShipRescue!!, Assets.horizontalShipRescueFlames!!, Assets.verticalShipRescueFlames!!, false, 0)
+    val rshiprescueTwo = ShipClass("ShiprescueTwo", 0, 0, Assets.SHIP_RESCUE_LENGTH, true, false, Assets.horizontalShipRescue!!, Assets.verticalShipRescue!!, Assets.horizontalShipRescueFlames!!, Assets.verticalShipRescueFlames!!, false, 0)
+    val rshiprescueThree = ShipClass("ShiprescueThree", 0, 0, Assets.SHIP_RESCUE_LENGTH, true, false, Assets.horizontalShipRescue!!, Assets.verticalShipRescue!!, Assets.horizontalShipRescueFlames!!, Assets.verticalShipRescueFlames!!, false, 0)
+    val rshippatrolOne = ShipClass("ShippatrolOne", 0, 0, Assets.SHIP_PATROL_LENGTH, true, false, Assets.horizontalShipPatrol!!, Assets.verticalShipPatrol!!, Assets.horizontalShipPatrolFlames!!, Assets.verticalShipPatrolFlames!!, false, 0)
+    val rshippatrolTwo = ShipClass("ShippatrolTwo", 0, 0, Assets.SHIP_PATROL_LENGTH, true, false, Assets.horizontalShipPatrol!!, Assets.verticalShipPatrol!!, Assets.horizontalShipPatrolFlames!!, Assets.verticalShipPatrolFlames!!, false, 0)
+    val rshippatrolThree = ShipClass("ShippatrolThree", 0, 0, Assets.SHIP_PATROL_LENGTH, true, false, Assets.horizontalShipPatrol!!, Assets.verticalShipPatrol!!, Assets.horizontalShipPatrolFlames!!, Assets.verticalShipPatrolFlames!!, false, 0)
+    val rshippatrolFour = ShipClass("ShippatrolFour", 0, 0, Assets.SHIP_PATROL_LENGTH, true, false, Assets.horizontalShipPatrol!!, Assets.verticalShipPatrol!!, Assets.horizontalShipPatrolFlames!!, Assets.verticalShipPatrolFlames!!, false, 0)
 
     var shipList : MutableList<ShipClass> = mutableListOf(carrier, battleshipOne, battleshipTwo, shiprescueOne, shiprescueTwo, shiprescueThree, shippatrolOne, shippatrolTwo, shippatrolThree, shippatrolFour)
     var rshipList : MutableList<ShipClass> = mutableListOf(rcarrier, rbattleshipOne, rbattleshipTwo, rshiprescueOne, rshiprescueTwo, rshiprescueThree, rshippatrolOne, rshippatrolTwo, rshippatrolThree, rshippatrolFour)
 
+    val waterDrop : Animation = Animation(Assets.waterSplash!!, 0, 0)
 
     override fun onUpdate(deltaTime: Float, touchEvents: MutableList<TouchHandler.TouchEvent>?) {
         if (touchEvents != null) {
@@ -126,6 +147,38 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
                         }
 
                         // Playing game phase
+                        if (model.state == SeaBattleAction.PLAYER_TURN) {
+                            if (rivalBoard.coordInsideBoard(CellDataClass(correctedEventX, correctedEventY))) {
+                                val clickedCell = rivalBoard.getCellInSecondBoard(CellDataClass(correctedEventX, correctedEventY))
+                                if (clickedCell!!.hasBoat == "" && !clickedCell.isHitted) {
+                                    if (soundEffects)
+                                        model.playSelectedSound(waterSound)
+                                    model.changeAnimationPosition(waterDrop, CellDataClass(correctedEventX, correctedEventY), SeaBattleAction.WAITING_WATER)
+                                    clickedCell.activeBitmap = clickedCell.hittedWater
+                                    clickedCell.isHitted = true
+                                }
+
+                                else if (clickedCell.hasBoat != "" && !clickedCell.isHitted) {
+                                    if (soundEffects)
+                                        model.playSelectedSound(explosionSound)
+                                    hittedBoat = model.getClickedBoat(CellDataClass(correctedEventX, correctedEventY), rshipList)!!
+                                    if (hittedBoat!!.hits == hittedBoat!!.shipLength - 1) {
+                                        hittedCells = rivalBoard.whereIsPlaced(hittedBoat!!)!!
+                                        for (cell in hittedCells) {
+                                            model.changeAnimationPosition(cell.explosionAnimation, CellDataClass(cell.cell.x + 13, cell.cell.y + 2), SeaBattleAction.WAITING_EXPLOSION)
+                                        }
+                                        hittedBoat!!.isSunk = true
+                                    }
+                                    else {
+                                        hittedCells = mutableListOf(clickedCell)
+                                        model.changeAnimationPosition(hittedCells[0].explosionAnimation, CellDataClass(correctedEventX, correctedEventY), SeaBattleAction.WAITING_EXPLOSION)
+                                        hittedBoat!!.hits++
+                                    }
+                                    clickedCell.activeBitmap = clickedCell.explotedWater
+                                    clickedCell.isHitted = true
+                                }
+                            }
+                        }
                     }
 
                     TouchHandler.TouchType.TOUCH_DRAGGED -> {
@@ -201,9 +254,7 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
                         }
 
                         // Playing game phase
-                        if (model.state == SeaBattleAction.PLAYER_TURN) {
 
-                        }
                     }
                 }
             }
@@ -216,6 +267,37 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
         }
 
         // Playing game phase
+        if (model.state == SeaBattleAction.WAITING_WATER) {
+            if (!waterDrop.bitmap.isEnded)
+                waterDrop.bitmap.update(deltaTime)
+            else {
+                model.changeGameState(SeaBattleAction.PLAYER_TURN)
+                waterDrop.bitmap.restart()
+            }
+        }
+
+        else if (model.state == SeaBattleAction.WAITING_EXPLOSION) {
+            if (hittedBoat!!.hits != hittedBoat!!.shipLength) {
+                if (!hittedCells[0].explosionAnimation.bitmap.isEnded)
+                    hittedCells[0].explosionAnimation.bitmap.update(deltaTime)
+                else {
+                    model.changeGameState(SeaBattleAction.PLAYER_TURN)
+                    hittedCells[0].explosionAnimation.bitmap.restart()
+                }
+            }
+
+            else {
+                for (cell in hittedCells) {
+                    if (cell.explosionAnimation.bitmap.isEnded)
+                        cell.explosionAnimation.bitmap.update(deltaTime)
+                    else {
+                        model.changeGameState(SeaBattleAction.PLAYER_TURN)
+                        cell.explosionAnimation.bitmap.restart()
+                        hittedBoat!!.isSunk = true
+                    }
+                }
+            }
+        }
     }
 
     override fun onDrawingRequested(): Bitmap {
@@ -224,14 +306,32 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
         drawBoard(player, rival)
         drawText(model.state)
         drawBoats()
-        /*if (model.state == SeaBattleAction.PLAYER_TURN)
-            drawRBoats()
-        */
+
         drawBattleButton(drawButton)
+
         if (model.state == SeaBattleAction.PLAYER_TURN)
             drawArrows()
 
+        if (model.state == SeaBattleAction.WAITING_WATER)
+            drawWaterDrop()
+
+        drawRBoats()
+
+        if (model.state == SeaBattleAction.WAITING_EXPLOSION) {
+            for (cell in hittedCells){
+                drawFireExplosion(cell)
+            }
+        }
+
         return graphics.frameBuffer
+    }
+
+    private fun drawFireExplosion(cell : BoardCellClass)  {
+        graphics.drawBitmap(cell.explosionAnimation.bitmap.currentFrame, cell.explosionAnimation.x * cellSide + xOffset, cell.explosionAnimation.y * cellSide + yOffset)
+    }
+
+    private fun drawWaterDrop() {
+        graphics.drawBitmap(waterDrop.bitmap.currentFrame, waterDrop.x * cellSide + xOffset, waterDrop.y * cellSide + yOffset)
     }
 
     private fun drawArrows() {
@@ -270,8 +370,16 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
             graphics.drawText(originX + (cellSide * 11), (originY - (cellSide * 0.75)).toFloat(), "Your turn! Sink the enemy's navy!")
         }
 
+        else if (state == SeaBattleAction.WAITING_WATER) {
+            graphics.drawText(originX + (cellSide * 11), (originY - (cellSide * 0.75)).toFloat(), "WATER!")
+        }
+
         else if (state == SeaBattleAction.COMPUTER_TURN) {
             graphics.drawText(originX + (cellSide * 11), (originY - (cellSide * 0.75)).toFloat(), "Watch out! It the turn or your rival!")
+        }
+
+        else if (state == SeaBattleAction.WAITING_EXPLOSION) {
+            graphics.drawText(originX + (cellSide * 11), (originY - (cellSide * 0.75)).toFloat(), "BOAT HIT!")
         }
 
         else if (state == SeaBattleAction.END_WIN) {
@@ -297,16 +405,85 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
     }
 
     private fun drawRBoats() {
-        graphics.drawBitmap(rcarrier.activeBitmap, rcarrier.x * cellSide + xOffset, rcarrier.y * cellSide + yOffset)
-        graphics.drawBitmap(rbattleshipOne.activeBitmap, rbattleshipOne.x * cellSide + xOffset, rbattleshipOne.y * cellSide + yOffset)
-        graphics.drawBitmap(rbattleshipTwo.activeBitmap, rbattleshipTwo.x * cellSide + xOffset, rbattleshipTwo.y * cellSide + yOffset)
-        graphics.drawBitmap(rshiprescueOne.activeBitmap, rshiprescueOne.x * cellSide + xOffset, rshiprescueOne.y * cellSide + yOffset)
-        graphics.drawBitmap(rshiprescueTwo.activeBitmap, rshiprescueTwo.x * cellSide + xOffset, rshiprescueTwo.y * cellSide + yOffset)
-        graphics.drawBitmap(rshiprescueThree.activeBitmap, rshiprescueThree.x * cellSide + xOffset, rshiprescueThree.y * cellSide + yOffset)
-        graphics.drawBitmap(rshippatrolOne.activeBitmap, rshippatrolOne.x * cellSide + xOffset, rshippatrolOne.y * cellSide + yOffset)
-        graphics.drawBitmap(rshippatrolTwo.activeBitmap, rshippatrolTwo.x * cellSide + xOffset, rshippatrolTwo.y * cellSide + yOffset)
-        graphics.drawBitmap(rshippatrolThree.activeBitmap, rshippatrolThree.x * cellSide + xOffset, rshippatrolThree.y * cellSide + yOffset)
-        graphics.drawBitmap(rshippatrolFour.activeBitmap, rshippatrolFour.x * cellSide + xOffset, rshippatrolFour.y * cellSide + yOffset)
+        if (rcarrier.isSunk) {
+            if (rcarrier.isHorizontal)
+                rcarrier.activeBitmap = rcarrier.horizontalFlamesBoat
+            else
+                rcarrier.activeBitmap = rcarrier.verticalFlamesBoat
+            graphics.drawBitmap(rcarrier.activeBitmap, rcarrier.x * cellSide + xOffset, rcarrier.y * cellSide + yOffset)
+        }
+
+        if (rbattleshipOne.isSunk) {
+            if (rbattleshipOne.isHorizontal)
+                rbattleshipOne.activeBitmap = rbattleshipOne.horizontalFlamesBoat
+            else
+                rbattleshipOne.activeBitmap = rbattleshipOne.verticalFlamesBoat
+            graphics.drawBitmap(rbattleshipOne.activeBitmap, rbattleshipOne.x * cellSide + xOffset, rbattleshipOne.y * cellSide + yOffset)
+        }
+
+        if (rbattleshipTwo.isSunk) {
+            if (rbattleshipTwo.isHorizontal)
+                rbattleshipTwo.activeBitmap = rbattleshipTwo.horizontalFlamesBoat
+            else
+                rbattleshipTwo.activeBitmap = rbattleshipTwo.verticalFlamesBoat
+            graphics.drawBitmap(rbattleshipTwo.activeBitmap, rbattleshipTwo.x * cellSide + xOffset, rbattleshipTwo.y * cellSide + yOffset)
+        }
+
+        if (rshiprescueOne.isSunk) {
+            if (rshiprescueOne.isHorizontal)
+                rshiprescueOne.activeBitmap = rshiprescueOne.horizontalFlamesBoat
+            else
+                rshiprescueOne.activeBitmap = rshiprescueOne.verticalFlamesBoat
+            graphics.drawBitmap(rshiprescueOne.activeBitmap, rshiprescueOne.x * cellSide + xOffset, rshiprescueOne.y * cellSide + yOffset)
+        }
+
+        if (rshiprescueTwo.isSunk) {
+            if (rshiprescueTwo.isHorizontal)
+                rshiprescueTwo.activeBitmap = rshiprescueTwo.horizontalFlamesBoat
+            else
+                rshiprescueTwo.activeBitmap = rshiprescueTwo.verticalFlamesBoat
+            graphics.drawBitmap(rshiprescueTwo.activeBitmap, rshiprescueTwo.x * cellSide + xOffset, rshiprescueTwo.y * cellSide + yOffset)
+        }
+
+        if (rshiprescueThree.isSunk) {
+            if (rshiprescueThree.isHorizontal)
+                rshiprescueThree.activeBitmap = rshiprescueThree.horizontalFlamesBoat
+            else
+                rshiprescueThree.activeBitmap = rshiprescueThree.verticalFlamesBoat
+            graphics.drawBitmap(rshiprescueThree.activeBitmap, rshiprescueThree.x * cellSide + xOffset, rshiprescueThree.y * cellSide + yOffset)
+        }
+
+        if (rshippatrolOne.isSunk) {
+            if (rshippatrolOne.isHorizontal)
+                rshippatrolOne.activeBitmap = rshippatrolOne.horizontalFlamesBoat
+            else
+                rshippatrolOne.activeBitmap = rshippatrolOne.verticalFlamesBoat
+            graphics.drawBitmap(rshippatrolOne.activeBitmap, rshippatrolOne.x * cellSide + xOffset, rshippatrolOne.y * cellSide + yOffset)
+        }
+
+        if (rshippatrolTwo.isSunk) {
+            if (rshippatrolTwo.isHorizontal)
+                rshippatrolTwo.activeBitmap = rshippatrolTwo.horizontalFlamesBoat
+            else
+                rshippatrolTwo.activeBitmap = rshippatrolTwo.verticalFlamesBoat
+            graphics.drawBitmap(rshippatrolTwo.activeBitmap, rshippatrolTwo.x * cellSide + xOffset, rshippatrolTwo.y * cellSide + yOffset)
+        }
+
+        if (rshippatrolThree.isSunk) {
+            if (rshippatrolThree.isHorizontal)
+                rshippatrolThree.activeBitmap = rshippatrolThree.horizontalFlamesBoat
+            else
+                rshippatrolThree.activeBitmap = rshippatrolThree.verticalFlamesBoat
+            graphics.drawBitmap(rshippatrolThree.activeBitmap, rshippatrolThree.x * cellSide + xOffset, rshippatrolThree.y * cellSide + yOffset)
+        }
+
+        if (rshippatrolFour.isSunk) {
+            if (rshippatrolFour.isHorizontal)
+                rshippatrolFour.activeBitmap = rshippatrolFour.horizontalFlamesBoat
+            else
+                rshippatrolFour.activeBitmap = rshippatrolFour.verticalFlamesBoat
+            graphics.drawBitmap(rshippatrolFour.activeBitmap, rshippatrolFour.x * cellSide + xOffset, rshippatrolFour.y * cellSide + yOffset)
+        }
     }
 
     private fun drawBattleButton(draw : Boolean) {
