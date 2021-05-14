@@ -28,6 +28,7 @@ object Assets {
     var waterTouched : Bitmap? = null
     var waterOver : Bitmap? = null
     var waterExploded : Bitmap? = null
+    var normalExplosion : Bitmap? = null
 
     var horizontalCarrier : Bitmap? = null
     var horizontalCarrierFlames : Bitmap? = null
@@ -91,6 +92,11 @@ object Assets {
         waterExploded?.recycle()
         waterExploded = Bitmap.createScaledBitmap(
                 BitmapFactory.decodeResource(resources, R.drawable.waterexploded),
+                (cellSize * 1.05).toInt(), (cellSize * 1.05).toInt(), true)
+
+        normalExplosion?.recycle()
+        normalExplosion = Bitmap.createScaledBitmap(
+                BitmapFactory.decodeResource(resources, R.drawable.explosion),
                 (cellSize * 1.05).toInt(), (cellSize * 1.05).toInt(), true)
 
         horizontalCarrier?.recycle()

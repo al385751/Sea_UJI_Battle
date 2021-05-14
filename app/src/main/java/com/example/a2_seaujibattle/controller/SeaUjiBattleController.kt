@@ -6,21 +6,25 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.media.AudioAttributes
 import android.media.SoundPool
+import android.os.Debug
+import android.util.Log
 import androidx.core.content.res.ResourcesCompat
 import com.example.a2_seaujibattle.R
 import com.example.a2_seaujibattle.additionalClasses.*
+import com.example.a2_seaujibattle.gameActivity.StartInterface
 import com.example.a2_seaujibattle.model.Model
 import com.example.a2_seaujibattle.model.SeaBattleAction
 import es.uji.vj1229.framework.Graphics
 import es.uji.vj1229.framework.IGameController
 import es.uji.vj1229.framework.TouchHandler
+import java.nio.DoubleBuffer
 import kotlin.math.min
 
 
 private const val TOTAL_CELLS_WIDTH  = 24
 private const val TOTAL_CELLS_HEIGHT  = 14
 
-class SeaUjiBattleController(width: Int, height: Int, applicationContext: Context, _soundEffects: String, _smartOpponent: String) : IGameController {
+class SeaUjiBattleController(width: Int, height: Int, applicationContext: Context, _soundEffects: String, _smartOpponent: String, startInterface: StartInterface) : IGameController {
     private val cellSide : Float = min(width.toFloat() / TOTAL_CELLS_WIDTH,
         height.toFloat() / TOTAL_CELLS_HEIGHT)
 
@@ -60,6 +64,8 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
     var waterSound : Int
     var explosionSound : Int
 
+    var gameStart : StartInterface = startInterface
+
     init {
         Assets.loadDrawableAssets(applicationContext)
         Assets.createResizedAssets(applicationContext, cellSide.toInt())
@@ -68,7 +74,7 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
         for (row in 0 until playerBoard.boardHeight) {
             columnBoard = mutableListOf()
             for (col in 0 until playerBoard.boardWidth) {
-                val actualCellBoard = BoardCellClass(CellDataClass(row, col), Assets.waterUntouched!!, Assets.waterOver!!, Assets.waterTouched!!, Assets.waterExploded!!, false, false)
+                val actualCellBoard = BoardCellClass(CellDataClass(row, col), Assets.waterUntouched!!, Assets.waterOver!!, Assets.waterTouched!!, Assets.waterExploded!!, Assets.normalExplosion!!, false, false)
                 columnBoard.add(actualCellBoard)
             }
             drawnPlayerBoard.add(columnBoard)
@@ -78,7 +84,7 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
         for (row in 0 until rivalBoard.boardHeight) {
             columnBoard = mutableListOf()
             for (col in 0 until rivalBoard.boardWidth) {
-                val actualCellBoard = BoardCellClass(CellDataClass(row, col), Assets.waterUntouched!!, Assets.waterOver!!, Assets.waterTouched!!, Assets.waterExploded!!, false, false)
+                val actualCellBoard = BoardCellClass(CellDataClass(row, col), Assets.waterUntouched!!, Assets.waterOver!!, Assets.waterTouched!!, Assets.waterExploded!!, Assets.normalExplosion!!, false, false)
                 columnBoard.add(actualCellBoard)
             }
             drawnRivalBoard.add(columnBoard)
@@ -100,6 +106,7 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
     }
 
     val model : Model = Model(soundPool)
+    var lastGameState : SeaBattleAction = model.state
 
     val carrier = ShipClass("Carrier",((originX2 - xOffset + cellSide) / cellSide).toInt(), ((originY2 - yOffset + cellSide) / cellSide).toInt(), Assets.CARRIER_LENGTH, true, false, Assets.horizontalCarrier!!, Assets.verticalCarrier!!, Assets.horizontalCarrierFlames!!, Assets.verticalCarrierFlames!!, false, 0)
     val battleshipOne = ShipClass("BattleshipOne", ((originX2 - xOffset + cellSide) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 3)) / cellSide).toInt(), Assets.BATTLESHIP_LENGTH, true, false, Assets.horizontalBattleship!!, Assets.verticalBattleship!!, Assets.horizontalBattleshipFlames!!, Assets.verticalBattleshipFlames!!, false, 0)
@@ -151,6 +158,7 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
                             if (rivalBoard.coordInsideBoard(CellDataClass(correctedEventX, correctedEventY))) {
                                 val clickedCell = rivalBoard.getCellInSecondBoard(CellDataClass(correctedEventX, correctedEventY))
                                 if (clickedCell!!.hasBoat == "" && !clickedCell.isHitted) {
+                                    lastGameState = model.state
                                     if (soundEffects)
                                         model.playSelectedSound(waterSound)
                                     model.changeAnimationPosition(waterDrop, CellDataClass(correctedEventX, correctedEventY), SeaBattleAction.WAITING_WATER)
@@ -159,6 +167,7 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
                                 }
 
                                 else if (clickedCell.hasBoat != "" && !clickedCell.isHitted) {
+                                    lastGameState = model.state
                                     if (soundEffects)
                                         model.playSelectedSound(explosionSound)
                                     hittedBoat = model.getClickedBoat(CellDataClass(correctedEventX, correctedEventY), rshipList)!!
@@ -201,8 +210,6 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
                                 }
                             }
                         }
-
-                        // Playing game phase
                     }
 
                     TouchHandler.TouchType.TOUCH_UP -> {
@@ -224,7 +231,8 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
                             else if (draggedBoat != null) {
                                 if (!model.checkPosition(CellDataClass(correctedEventX, correctedEventY), draggedBoat!!, playerBoard)) {
                                     model.resetPosition(draggedBoat!!, playerBoard)
-                                    model.resetBoardOfBoat(draggedBoat!!, playerBoard)
+                                    if (playerBoard.coordInsideBoard(CellDataClass(correctedEventX, correctedEventY)))
+                                        model.resetBoardOfBoat(draggedBoat!!, playerBoard)
                                     model.resetWaterCells(playerBoard)
                                 }
 
@@ -253,8 +261,12 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
                             }
                         }
 
-                        // Playing game phase
-
+                        // End game phase
+                        if (model.state == SeaBattleAction.END_WIN || model.state == SeaBattleAction.END_LOSE) {
+                            if (model.checkIfRestartPressed(CellDataClass(correctedEventX, correctedEventY))) {
+                                gameStart.reStartActivity()
+                            }
+                        }
                     }
                 }
             }
@@ -271,7 +283,10 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
             if (!waterDrop.bitmap.isEnded)
                 waterDrop.bitmap.update(deltaTime)
             else {
-                model.changeGameState(SeaBattleAction.PLAYER_TURN)
+                if (lastGameState == SeaBattleAction.PLAYER_TURN)
+                    model.changeGameState(SeaBattleAction.COMPUTER_TURN)
+                else if (lastGameState == SeaBattleAction.COMPUTER_TURN)
+                    model.changeGameState(SeaBattleAction.PLAYER_TURN)
                 waterDrop.bitmap.restart()
             }
         }
@@ -281,7 +296,7 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
                 if (!hittedCells[0].explosionAnimation.bitmap.isEnded)
                     hittedCells[0].explosionAnimation.bitmap.update(deltaTime)
                 else {
-                    model.changeGameState(SeaBattleAction.PLAYER_TURN)
+                    model.changeGameState(lastGameState)
                     hittedCells[0].explosionAnimation.bitmap.restart()
                 }
             }
@@ -291,12 +306,60 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
                     if (cell.explosionAnimation.bitmap.isEnded)
                         cell.explosionAnimation.bitmap.update(deltaTime)
                     else {
-                        model.changeGameState(SeaBattleAction.PLAYER_TURN)
+                        model.changeGameState(lastGameState)
                         cell.explosionAnimation.bitmap.restart()
                         hittedBoat!!.isSunk = true
                     }
                 }
             }
+        }
+
+        else if (model.state == SeaBattleAction.COMPUTER_TURN) {
+            val selectedCell : BoardCellClass = if (!smartOpponent)
+                model.getRandomCellInBoard(playerBoard)
+            else
+                model.getRandomCellInBoard(playerBoard)
+            if (selectedCell.hasBoat == "" && !selectedCell.isHitted) {
+                lastGameState = model.state
+                if (soundEffects)
+                    model.playSelectedSound(waterSound)
+                model.changeAnimationPosition(waterDrop, CellDataClass(selectedCell.cell.x + 1, selectedCell.cell.y + 2), SeaBattleAction.WAITING_WATER)
+                selectedCell.activeBitmap = selectedCell.hittedWater
+                selectedCell.isHitted = true
+            }
+
+            else if (selectedCell.hasBoat != "" && !selectedCell.isHitted) {
+                selectedCell.showExplosion = true
+                lastGameState = model.state
+                if (soundEffects)
+                    model.playSelectedSound(explosionSound)
+                hittedBoat = model.getClickedBoat(CellDataClass(selectedCell.cell.x + 1, selectedCell.cell.y + 2), shipList)!!
+                if (hittedBoat!!.hits == hittedBoat!!.shipLength - 1) {
+                    hittedCells = playerBoard.whereIsPlaced(hittedBoat!!)!!
+                    for (cell in hittedCells) {
+                        model.changeAnimationPosition(cell.explosionAnimation, CellDataClass(cell.cell.x + 1, cell.cell.y + 2), SeaBattleAction.WAITING_EXPLOSION)
+                        cell.showExplosion = false
+                    }
+                    hittedBoat!!.isSunk = true
+                    if (hittedBoat!!.isHorizontal)
+                        hittedBoat!!.activeBitmap = hittedBoat!!.horizontalFlamesBoat
+                    else
+                        hittedBoat!!.activeBitmap = hittedBoat!!.verticalFlamesBoat
+                }
+                else {
+                    hittedCells = mutableListOf(selectedCell)
+                    model.changeAnimationPosition(hittedCells[0].explosionAnimation, CellDataClass(selectedCell.cell.x + 1, selectedCell.cell.y + 2), SeaBattleAction.WAITING_EXPLOSION)
+                    hittedBoat!!.hits++
+                }
+                selectedCell.isHitted = true
+            }
+        }
+
+        if (model.state == SeaBattleAction.PLAYER_TURN || model.state == SeaBattleAction.COMPUTER_TURN){
+            if (model.getAllBoatsSunk(shipList))
+                model.changeGameState(SeaBattleAction.END_LOSE)
+            else if (model.getAllBoatsSunk(rshipList))
+                model.changeGameState(SeaBattleAction.END_WIN)
         }
     }
 
@@ -308,6 +371,8 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
         drawBoats()
 
         drawBattleButton(drawButton)
+
+        drawExplosionOver()
 
         if (model.state == SeaBattleAction.PLAYER_TURN)
             drawArrows()
@@ -323,7 +388,27 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
             }
         }
 
+        if (model.state == SeaBattleAction.END_WIN || model.state == SeaBattleAction.END_LOSE)
+            drawRestartButton()
+
         return graphics.frameBuffer
+    }
+
+    private fun drawRestartButton() {
+        graphics.drawRect((playerBoard.coordTL.x + playerBoard.boardWidth - 2) * cellSide + xOffset, ((playerBoard.coordTL.y + playerBoard.boardHeight + 0.5) * cellSide + yOffset).toFloat(), cellSide * 6, (cellSide * 1.5).toFloat(), Color.parseColor("#FFBF00"))
+        graphics.setTextColor(Color.BLACK)
+        graphics.drawText((playerBoard.coordTL.x + playerBoard.boardWidth + 1) * cellSide + xOffset, ((playerBoard.coordTL.y + playerBoard.boardHeight + 1.65) * cellSide + yOffset).toFloat(), "Play Again")
+
+    }
+
+    private fun drawExplosionOver() {
+        for (row in playerBoard.board) {
+            for (cell in row) {
+                if (cell.isHitted && cell.hasBoat != "" && cell.showExplosion) {
+                    graphics.drawBitmap(cell.normalExplosion, (cell.cell.x + 1) * cellSide + xOffset, (cell.cell.y + 2) * cellSide + yOffset)
+                }
+            }
+        }
     }
 
     private fun drawFireExplosion(cell : BoardCellClass)  {
@@ -340,7 +425,7 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
 
     private fun drawBoard(player : Boolean, rival : Boolean) {
         if (player) {
-            for (list in drawnPlayerBoard) {
+            for (list in playerBoard.board) {
                 for (cell in list) {
                     graphics.drawBitmap(cell.activeBitmap, originX + (cellSide * cell.cell.x), originY + (cellSide * cell.cell.y))
                 }
@@ -348,7 +433,7 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
         }
 
         if (rival) {
-            for (list in drawnRivalBoard) {
+            for (list in rivalBoard.board) {
                 for (cell in list) {
                     graphics.drawBitmap(cell.activeBitmap, originX2 + (cellSide * cell.cell.x), originY2 + (cellSide * cell.cell.y))
                 }
@@ -370,24 +455,32 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
             graphics.drawText(originX + (cellSide * 11), (originY - (cellSide * 0.75)).toFloat(), "Your turn! Sink the enemy's navy!")
         }
 
-        else if (state == SeaBattleAction.WAITING_WATER) {
+        else if (state == SeaBattleAction.COMPUTER_TURN) {
+            graphics.drawText(originX + (cellSide * 11), (originY - (cellSide * 0.75)).toFloat(), "Watch out! It's the turn of your rival!")
+        }
+
+        else if (state == SeaBattleAction.WAITING_WATER && lastGameState == SeaBattleAction.PLAYER_TURN) {
             graphics.drawText(originX + (cellSide * 11), (originY - (cellSide * 0.75)).toFloat(), "WATER!")
         }
 
-        else if (state == SeaBattleAction.COMPUTER_TURN) {
-            graphics.drawText(originX + (cellSide * 11), (originY - (cellSide * 0.75)).toFloat(), "Watch out! It the turn or your rival!")
+        else if (state == SeaBattleAction.WAITING_WATER && lastGameState == SeaBattleAction.COMPUTER_TURN) {
+            graphics.drawText(originX + (cellSide * 11), (originY - (cellSide * 0.75)).toFloat(), "Watch out! It's the turn of your rival!")
         }
 
-        else if (state == SeaBattleAction.WAITING_EXPLOSION) {
+        else if (state == SeaBattleAction.WAITING_EXPLOSION && lastGameState == SeaBattleAction.PLAYER_TURN) {
             graphics.drawText(originX + (cellSide * 11), (originY - (cellSide * 0.75)).toFloat(), "BOAT HIT!")
         }
 
+        else if (state == SeaBattleAction.WAITING_EXPLOSION && lastGameState == SeaBattleAction.COMPUTER_TURN) {
+            graphics.drawText(originX + (cellSide * 11), (originY - (cellSide * 0.75)).toFloat(), "Watch out! It's the turn of your rival!")
+        }
+
         else if (state == SeaBattleAction.END_WIN) {
-            graphics.drawText(originX + (cellSide * 11), (originY - (cellSide * 0.75)).toFloat(), "Congrats!! You won the game!")
+            graphics.drawText(originX + (cellSide * 11), (originY - (cellSide * 0.75)).toFloat(), "Congrats!! You WON the game! :)")
         }
 
         else if (state == SeaBattleAction.END_LOSE) {
-            graphics.drawText(originX + (cellSide * 11), (originY - (cellSide * 0.75)).toFloat(), "Oh no!! You lost!")
+            graphics.drawText(originX + (cellSide * 11), (originY - (cellSide * 0.75)).toFloat(), "Oh no!! You've LOST... :(")
         }
     }
 

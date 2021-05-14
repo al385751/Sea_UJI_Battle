@@ -63,24 +63,48 @@ class Model(pool: SoundPool) : SoundPlayer {
     fun moveBoat(coord: CellDataClass, ship: ShipClass) {
         ship.x = coord.x
         ship.y = coord.y
-        if (ship.shipLength == 4 && ship.x > 20) {
+        if (ship.isHorizontal) {
+            if (ship.shipLength == 4 && ship.x > 20) {
                 ship.x = 20
+            }
+
+            else if (ship.shipLength == 3 && ship.x > 21) {
+                ship.x = 21
+            }
+
+            else if (ship.shipLength == 2 && ship.x > 22) {
+                ship.x = 22
+            }
+
+            else if (ship.shipLength == 1 && ship.x > 23) {
+                ship.x = 23
+            }
+
+            if (ship.y > 13) {
+                ship.y = 13
+            }
         }
 
-        else if (ship.shipLength == 3 && ship.x > 21) {
-            ship.x = 21
-        }
+        else {
+            if (ship.shipLength == 4 && ship.y > 10) {
+                ship.y = 10
+            }
 
-        else if (ship.shipLength == 2 && ship.x > 22) {
-            ship.x = 22
-        }
+            else if (ship.shipLength == 3 && ship.y > 11) {
+                ship.y = 11
+            }
 
-        else if (ship.shipLength == 1 && ship.x > 23) {
-            ship.x = 23
-        }
+            else if (ship.shipLength == 2 && ship.y > 12) {
+                ship.y = 12
+            }
 
-        if (ship.y > 13) {
-            ship.y = 13
+            else if (ship.shipLength == 1 && ship.y > 13) {
+                ship.y = 13
+            }
+
+            if (ship.x > 23) {
+                ship.x = 23
+            }
         }
     }
 
@@ -348,5 +372,31 @@ class Model(pool: SoundPool) : SoundPlayer {
 
     override fun playSelectedSound(sound: Int) {
         soundPool.play(sound, 1F, 1F, 1, 0, 1F)
+    }
+
+    fun getRandomCellInBoard(board: BoardClass) : BoardCellClass {
+        var coordX : Int = 0
+        var coordY : Int = 0
+        var selected = false
+        while (!selected) {
+            coordX = (board.coordTL.x until board.coordTL.x + board.boardWidth).random()
+            coordY = (board.coordTL.y until board.coordTL.y + board.boardHeight).random()
+            if (!board.getCellInFirstBoard(CellDataClass(coordX, coordY))!!.isHitted)
+                selected = true
+        }
+        return board.getCellInFirstBoard(CellDataClass(coordX, coordY))!!
+    }
+
+    fun getAllBoatsSunk(ships: MutableList<ShipClass>): Boolean {
+        var allSunk : Boolean = true
+        for (ship in ships) {
+            if (!ship.isSunk)
+                allSunk = false
+        }
+        return allSunk
+    }
+
+    fun checkIfRestartPressed(cell: CellDataClass): Boolean {
+        return (cell.x in 9..14) && (cell.y in 12..13)
     }
 }
