@@ -2,6 +2,8 @@ package com.example.a2_seaujibattle.model
 
 import android.media.SoundPool
 import com.example.a2_seaujibattle.additionalClasses.*
+import com.example.a2_seaujibattle.computerStrategy.SimpleStrategy
+import com.example.a2_seaujibattle.computerStrategy.SmartStrategy
 
 enum class SeaBattleAction {
     PLACE_SHIPS,
@@ -14,13 +16,15 @@ enum class SeaBattleAction {
 }
 
 interface SoundPlayer {
-    fun playSelectedSound(sound : Int)
+    fun playSelectedSound(sound : Int, volumeSound : Float)
 }
 
-class Model(pool: SoundPool) : SoundPlayer {
+class Model(pool: SoundPool, _simpleStrategy: SimpleStrategy, _smartStrategy: SmartStrategy) : SoundPlayer {
     var state = SeaBattleAction.PLACE_SHIPS
         private set
     var soundPool : SoundPool = pool
+    var simpleStrategy : SimpleStrategy = _simpleStrategy
+    var smartStrategy : SmartStrategy = _smartStrategy
 
     fun clickedOnBoat(coord : CellDataClass, shipList : MutableList<ShipClass>) : Boolean {
         for (ship in shipList) {
@@ -370,25 +374,26 @@ class Model(pool: SoundPool) : SoundPlayer {
         state = gameState
     }
 
-    override fun playSelectedSound(sound: Int) {
-        soundPool.play(sound, 1F, 1F, 1, 0, 1F)
+    override fun playSelectedSound(sound: Int, volume: Float) {
+        soundPool.play(sound, volume, volume, 1, 0, 1F)
     }
 
-    fun getRandomCellInBoard(board: BoardClass) : BoardCellClass {
-        var coordX : Int = 0
-        var coordY : Int = 0
-        var selected = false
-        while (!selected) {
-            coordX = (board.coordTL.x until board.coordTL.x + board.boardWidth).random()
-            coordY = (board.coordTL.y until board.coordTL.y + board.boardHeight).random()
-            if (!board.getCellInFirstBoard(CellDataClass(coordX, coordY))!!.isHitted)
-                selected = true
+    fun getRandomCellInBoard(smart : Boolean) : BoardCellClass {
+        val selectedCell : BoardCellClass
+        if (!smart) {
+            selectedCell = simpleStrategy.computerGuess()
+            simpleStrategy.shotResults(selectedCell)
         }
-        return board.getCellInFirstBoard(CellDataClass(coordX, coordY))!!
+
+        else {
+            selectedCell = smartStrategy.computerGuess()
+            smartStrategy.shotResults(selectedCell)
+        }
+        return selectedCell
     }
 
     fun getAllBoatsSunk(ships: MutableList<ShipClass>): Boolean {
-        var allSunk : Boolean = true
+        var allSunk = true
         for (ship in ships) {
             if (!ship.isSunk)
                 allSunk = false

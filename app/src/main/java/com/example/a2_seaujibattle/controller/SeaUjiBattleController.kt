@@ -6,18 +6,17 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.media.AudioAttributes
 import android.media.SoundPool
-import android.os.Debug
-import android.util.Log
 import androidx.core.content.res.ResourcesCompat
 import com.example.a2_seaujibattle.R
 import com.example.a2_seaujibattle.additionalClasses.*
+import com.example.a2_seaujibattle.computerStrategy.SimpleStrategy
+import com.example.a2_seaujibattle.computerStrategy.SmartStrategy
 import com.example.a2_seaujibattle.gameActivity.StartInterface
 import com.example.a2_seaujibattle.model.Model
 import com.example.a2_seaujibattle.model.SeaBattleAction
 import es.uji.vj1229.framework.Graphics
 import es.uji.vj1229.framework.IGameController
 import es.uji.vj1229.framework.TouchHandler
-import java.nio.DoubleBuffer
 import kotlin.math.min
 
 
@@ -105,7 +104,9 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
         explosionSound = soundPool.load(applicationContext, R.raw.explosion, 1)
     }
 
-    val model : Model = Model(soundPool)
+    val simpleStrategy : SimpleStrategy = SimpleStrategy(playerBoard)
+    val smartStrategy : SmartStrategy = SmartStrategy(playerBoard)
+    val model : Model = Model(soundPool, simpleStrategy, smartStrategy)
     var lastGameState : SeaBattleAction = model.state
 
     val carrier = ShipClass("Carrier",((originX2 - xOffset + cellSide) / cellSide).toInt(), ((originY2 - yOffset + cellSide) / cellSide).toInt(), Assets.CARRIER_LENGTH, true, false, Assets.horizontalCarrier!!, Assets.verticalCarrier!!, Assets.horizontalCarrierFlames!!, Assets.verticalCarrierFlames!!, false, 0)
@@ -160,7 +161,7 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
                                 if (clickedCell!!.hasBoat == "" && !clickedCell.isHitted) {
                                     lastGameState = model.state
                                     if (soundEffects)
-                                        model.playSelectedSound(waterSound)
+                                        model.playSelectedSound(waterSound, 0.5F)
                                     model.changeAnimationPosition(waterDrop, CellDataClass(correctedEventX, correctedEventY), SeaBattleAction.WAITING_WATER)
                                     clickedCell.activeBitmap = clickedCell.hittedWater
                                     clickedCell.isHitted = true
@@ -168,10 +169,10 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
 
                                 else if (clickedCell.hasBoat != "" && !clickedCell.isHitted) {
                                     lastGameState = model.state
-                                    if (soundEffects)
-                                        model.playSelectedSound(explosionSound)
                                     hittedBoat = model.getClickedBoat(CellDataClass(correctedEventX, correctedEventY), rshipList)!!
                                     if (hittedBoat!!.hits == hittedBoat!!.shipLength - 1) {
+                                        if (soundEffects)
+                                            model.playSelectedSound(explosionSound, 1F)
                                         hittedCells = rivalBoard.whereIsPlaced(hittedBoat!!)!!
                                         for (cell in hittedCells) {
                                             model.changeAnimationPosition(cell.explosionAnimation, CellDataClass(cell.cell.x + 13, cell.cell.y + 2), SeaBattleAction.WAITING_EXPLOSION)
@@ -179,6 +180,8 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
                                         hittedBoat!!.isSunk = true
                                     }
                                     else {
+                                        if (soundEffects)
+                                            model.playSelectedSound(explosionSound, 0.5F)
                                         hittedCells = mutableListOf(clickedCell)
                                         model.changeAnimationPosition(hittedCells[0].explosionAnimation, CellDataClass(correctedEventX, correctedEventY), SeaBattleAction.WAITING_EXPLOSION)
                                         hittedBoat!!.hits++
@@ -316,13 +319,13 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
 
         else if (model.state == SeaBattleAction.COMPUTER_TURN) {
             val selectedCell : BoardCellClass = if (!smartOpponent)
-                model.getRandomCellInBoard(playerBoard)
+                model.getRandomCellInBoard(smartOpponent)
             else
-                model.getRandomCellInBoard(playerBoard)
+                model.getRandomCellInBoard(smartOpponent)
             if (selectedCell.hasBoat == "" && !selectedCell.isHitted) {
                 lastGameState = model.state
                 if (soundEffects)
-                    model.playSelectedSound(waterSound)
+                    model.playSelectedSound(waterSound, 0.5F)
                 model.changeAnimationPosition(waterDrop, CellDataClass(selectedCell.cell.x + 1, selectedCell.cell.y + 2), SeaBattleAction.WAITING_WATER)
                 selectedCell.activeBitmap = selectedCell.hittedWater
                 selectedCell.isHitted = true
@@ -331,10 +334,10 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
             else if (selectedCell.hasBoat != "" && !selectedCell.isHitted) {
                 selectedCell.showExplosion = true
                 lastGameState = model.state
-                if (soundEffects)
-                    model.playSelectedSound(explosionSound)
                 hittedBoat = model.getClickedBoat(CellDataClass(selectedCell.cell.x + 1, selectedCell.cell.y + 2), shipList)!!
                 if (hittedBoat!!.hits == hittedBoat!!.shipLength - 1) {
+                    if (soundEffects)
+                        model.playSelectedSound(explosionSound, 1F)
                     hittedCells = playerBoard.whereIsPlaced(hittedBoat!!)!!
                     for (cell in hittedCells) {
                         model.changeAnimationPosition(cell.explosionAnimation, CellDataClass(cell.cell.x + 1, cell.cell.y + 2), SeaBattleAction.WAITING_EXPLOSION)
@@ -346,7 +349,10 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
                     else
                         hittedBoat!!.activeBitmap = hittedBoat!!.verticalFlamesBoat
                 }
+
                 else {
+                    if (soundEffects)
+                        model.playSelectedSound(explosionSound, 0.5F)
                     hittedCells = mutableListOf(selectedCell)
                     model.changeAnimationPosition(hittedCells[0].explosionAnimation, CellDataClass(selectedCell.cell.x + 1, selectedCell.cell.y + 2), SeaBattleAction.WAITING_EXPLOSION)
                     hittedBoat!!.hits++

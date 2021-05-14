@@ -55,6 +55,7 @@
         android:textColorLink="#000000"
         android:textSize="18sp"
         android:thumbTint="#FFBF00"
+        android:onClick="turnOnOffMusic"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/UJISeaBattleText"
         tools:ignore="UseSwitchCompatOrMaterialXml" />
