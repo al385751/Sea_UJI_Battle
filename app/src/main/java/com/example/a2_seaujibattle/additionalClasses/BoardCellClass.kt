@@ -19,4 +19,5 @@ class BoardCellClass(_cell: CellDataClass, _normalWater : Bitmap, _redWater : Bi
     var partOfBoat : Int = -1
     var explosionAnimation : Animation = Animation(Assets.fireExplosion!!, 0, 0)
     var showExplosion = true
+    var weight = 0
 }

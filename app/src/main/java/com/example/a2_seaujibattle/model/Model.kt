@@ -392,6 +392,16 @@ class Model(pool: SoundPool, _simpleStrategy: SimpleStrategy, _smartStrategy: Sm
         return selectedCell
     }
 
+    fun getShotResult(smart: Boolean, cell: BoardCellClass) {
+        if (!smart) {
+            simpleStrategy.shotResults(cell)
+        }
+
+        else {
+            smartStrategy.shotResults(cell)
+        }
+    }
+
     fun getAllBoatsSunk(ships: MutableList<ShipClass>): Boolean {
         var allSunk = true
         for (ship in ships) {

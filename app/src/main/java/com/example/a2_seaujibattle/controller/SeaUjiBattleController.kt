@@ -104,11 +104,6 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
         explosionSound = soundPool.load(applicationContext, R.raw.explosion, 1)
     }
 
-    val simpleStrategy : SimpleStrategy = SimpleStrategy(playerBoard)
-    val smartStrategy : SmartStrategy = SmartStrategy(playerBoard)
-    val model : Model = Model(soundPool, simpleStrategy, smartStrategy)
-    var lastGameState : SeaBattleAction = model.state
-
     val carrier = ShipClass("Carrier",((originX2 - xOffset + cellSide) / cellSide).toInt(), ((originY2 - yOffset + cellSide) / cellSide).toInt(), Assets.CARRIER_LENGTH, true, false, Assets.horizontalCarrier!!, Assets.verticalCarrier!!, Assets.horizontalCarrierFlames!!, Assets.verticalCarrierFlames!!, false, 0)
     val battleshipOne = ShipClass("BattleshipOne", ((originX2 - xOffset + cellSide) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 3)) / cellSide).toInt(), Assets.BATTLESHIP_LENGTH, true, false, Assets.horizontalBattleship!!, Assets.verticalBattleship!!, Assets.horizontalBattleshipFlames!!, Assets.verticalBattleshipFlames!!, false, 0)
     val battleshipTwo = ShipClass("BattleshipTwo", ((originX2 - xOffset + (cellSide * 5)) / cellSide).toInt(), ((originY2 - yOffset + (cellSide * 3)) / cellSide).toInt(), Assets.BATTLESHIP_LENGTH, true, false, Assets.horizontalBattleship!!, Assets.verticalBattleship!!, Assets.horizontalBattleshipFlames!!, Assets.verticalBattleshipFlames!!, false, 0)
@@ -135,6 +130,11 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
     var rshipList : MutableList<ShipClass> = mutableListOf(rcarrier, rbattleshipOne, rbattleshipTwo, rshiprescueOne, rshiprescueTwo, rshiprescueThree, rshippatrolOne, rshippatrolTwo, rshippatrolThree, rshippatrolFour)
 
     val waterDrop : Animation = Animation(Assets.waterSplash!!, 0, 0)
+
+    val simpleStrategy : SimpleStrategy = SimpleStrategy(playerBoard)
+    val smartStrategy : SmartStrategy = SmartStrategy(playerBoard, shipList)
+    val model : Model = Model(soundPool, simpleStrategy, smartStrategy)
+    var lastGameState : SeaBattleAction = model.state
 
     override fun onUpdate(deltaTime: Float, touchEvents: MutableList<TouchHandler.TouchEvent>?) {
         if (touchEvents != null) {
@@ -318,10 +318,7 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
         }
 
         else if (model.state == SeaBattleAction.COMPUTER_TURN) {
-            val selectedCell : BoardCellClass = if (!smartOpponent)
-                model.getRandomCellInBoard(smartOpponent)
-            else
-                model.getRandomCellInBoard(smartOpponent)
+            val selectedCell : BoardCellClass = model.getRandomCellInBoard(smartOpponent)
             if (selectedCell.hasBoat == "" && !selectedCell.isHitted) {
                 lastGameState = model.state
                 if (soundEffects)
@@ -359,6 +356,7 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
                 }
                 selectedCell.isHitted = true
             }
+            model.getShotResult(smartOpponent, selectedCell)
         }
 
         if (model.state == SeaBattleAction.PLAYER_TURN || model.state == SeaBattleAction.COMPUTER_TURN){
@@ -377,6 +375,9 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
         drawBoats()
 
         drawBattleButton(drawButton)
+
+        if (model.state == SeaBattleAction.END_LOSE)
+            drawRemainingBoats()
 
         drawExplosionOver()
 
@@ -398,6 +399,13 @@ class SeaUjiBattleController(width: Int, height: Int, applicationContext: Contex
             drawRestartButton()
 
         return graphics.frameBuffer
+    }
+
+    private fun drawRemainingBoats() {
+        for (ship in rshipList) {
+            if (!ship.isSunk)
+                graphics.drawBitmap(ship.activeBitmap, ship.x * cellSide + xOffset, ship.y * cellSide + yOffset)
+        }
     }
 
     private fun drawRestartButton() {

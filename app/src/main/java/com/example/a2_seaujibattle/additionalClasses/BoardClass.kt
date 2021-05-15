@@ -59,4 +59,12 @@ class BoardClass(_coordTL: CellDataClass, _boardWidth: Int, _boardHeight: Int, _
         }
         return null
     }
+
+    fun getBoatInCell(cell: BoardCellClass, shipList : MutableList<ShipClass>) : ShipClass? {
+        for (ship in shipList) {
+            if (cell in whereIsPlaced(ship)!!)
+                return ship
+        }
+        return null
+    }
 }
